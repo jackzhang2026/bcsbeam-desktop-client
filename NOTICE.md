@@ -104,6 +104,14 @@ window, navigating to the live portal, logging in, and confirming the
 poller detects it — that still needs to happen on a machine that can run a
 real Electron window (e.g. Jack's own dev machine, or CI).
 
+**2026-08-26, handed off:** see
+`HANDOFF_ELECTRON_LOGIN_VERIFICATION_20260826.md` for the zero-context
+handoff to whoever runs that real verification next (staged: a mock-server
+dry run first with `scripts/mock-portal-login-server.mjs`, then the real
+thing against `https://customer.centoffer.com`). Update this section with
+the outcome once that's done, rather than adding a third parallel status
+note — keep the verification story in one place.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,
