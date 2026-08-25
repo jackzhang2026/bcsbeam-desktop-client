@@ -2,13 +2,13 @@
  * @see https://www.electron.build/configuration/configuration
  */
 {
-  appId: "io.opencorp.desktop.base",
-  productName: "OpenCorp-Base",
+  appId: "com.brocent.bcsbeam.desktop",
+  productName: "BCS Beam",
   asar: true,
   asarUnpack: ["**/*.node"],
   extends: null,
   directories: {
-    output: "release/Base/${version}",
+    output: "release/BcsBeam/${version}",
   },
   files: [
     "dist",
@@ -64,7 +64,7 @@
   linux: {
     icon: "./dist/icons/icon.png",
     target: "deb",
-    maintainer: "opencorp-base",
+    maintainer: "Brocent",
     artifactName: "${productName}_${version}_${arch}.${ext}",
     extraResources: [
       {
@@ -85,6 +85,6 @@
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     deleteAppDataOnUninstall: true,
-    shortcutName: "OpenCorp-Base",
+    shortcutName: "BCS Beam",
   },
 }

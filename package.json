@@ -1,9 +1,10 @@
 {
-  "name": "OpenCorp-Base",
-  "version": "3.8.3",
+  "name": "bcsbeam-desktop-client",
+  "version": "0.1.0",
   "main": "dist-electron/main/index.js",
-  "description": "OpenIM PC Client.",
-  "author": "blooming",
+  "description": "BCS Beam desktop client — chat, tickets, device/self-service, and remote-support entry, extending OpenIM's official Electron reference client.",
+  "author": "Brocent",
+  "license": "AGPL-3.0-only",
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "debug": {
