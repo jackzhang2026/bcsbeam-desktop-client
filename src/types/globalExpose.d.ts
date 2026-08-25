@@ -14,6 +14,14 @@ export interface IElectronAPI {
   ipcSendSync: <T = unknown>(channel: string, ...args: unknown[]) => T;
   saveFileToDisk: (params: { file: File; sync?: boolean }) => Promise<string>;
   getFileByPath: (filePath: string) => Promise<File | null>;
+  /** Opens the real customer-portal login page in its own window and resolves
+   * with the OpenIM credentials minted for that portal session once login
+   * completes. See electron/main/portalLoginWindow.ts. */
+  portalLogin: () => Promise<{
+    openimUserID: string;
+    token: string;
+    expireTimeSeconds: number;
+  }>;
 }
 
 declare global {

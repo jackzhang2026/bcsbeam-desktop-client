@@ -31,7 +31,7 @@ exactly one tray icon (this app's). Full design/decision record:
 - `package.json`: `name` → `bcsbeam-desktop-client`, `version` reset to
   `0.1.0` (this is a new product line, not a continuation of the demo's own
   versioning), `description`/`author` updated, explicit `license:
-  "AGPL-3.0-only"` added (upstream didn't declare one in `package.json`,
+"AGPL-3.0-only"` added (upstream didn't declare one in `package.json`,
   though the repo-root `LICENSE` file was always AGPL-3.0).
 - `index.html`: `<title>` → `BCS Beam`.
 - `electron-builder.json5`: `appId` → `com.brocent.bcsbeam.desktop`,
@@ -40,7 +40,35 @@ exactly one tray icon (this app's). Full design/decision record:
   build-target or packaging-logic changes.
 - This `NOTICE.md` itself.
 
+## Login architecture finding (2026-08-26, corrects the earlier research-spike recommendation)
+
+Traced the fork's own login flow: `src/pages/login/LoginForm.tsx` gets an
+`imToken` from OpenIM's demo "chat" backend, then
+`src/layout/useGlobalEvents.tsx`'s `tryLogin()` calls
+`IMSDK.initSDK(...)` + `IMSDK.login({userID, token})`. We replace the demo
+backend with our own `POST /api/openim/token/` (`backend/openim_bridge/`),
+which returns `{openimUserID, token, expireTimeSeconds}` — a drop-in fit for
+`IMSDK.login()`.
+
+**Found a real blocker:** `/api/openim/token/` requires a Customer Portal
+bearer token, and the DRF auth class validating it
+(`api/portal_authentication.py`'s `PortalAuthentication`) also requires the
+request's `Origin`/`Referer` to match the customer portal's real host
+(`customer.centoffer.com` / `/customer-portal` path) — a defense against a
+stale browser tab replaying the header, which a native Electron HTTP call
+doesn't produce. `POST /api/customer-portal/auth/` (the login call itself)
+is unaffected (`AllowAny`, no origin requirement) — only the _following_
+token-broker call would 401.
+
+**Corrected Phase 1 plan:** the handoff doc's original §7 Q3 recommendation
+("native login form, skip WebView for Phase 1") is superseded — load the
+_real_ customer-portal login page in an Electron window instead of a native
+form. Real browser semantics give the correct Origin automatically, this
+touches zero backend security code, and it's reusable groundwork for the
+later WebView-into-portal ticket milestone rather than throwaway work.
+
 **Not yet done** (tracked in the register, not silently skipped):
+
 - No app icon/logo assets yet — still using upstream's own icons under
   `dist/icons/`. BCS Beam brand assets (see the RustDesk fork's `res/`
   artwork for the existing approved v1.3 brand system: steel-gradient "B"

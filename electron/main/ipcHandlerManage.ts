@@ -2,6 +2,7 @@ import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
 import {
   clearCache,
   closeWindow,
+  getMainWindow,
   minimize,
   showWindow,
   splashEnd,
@@ -11,6 +12,7 @@ import { t } from "i18next";
 import { IpcRenderToMain } from "../constants";
 import { getStore } from "./storeManage";
 import { changeLanguage } from "../i18n";
+import { openPortalLoginWindow } from "./portalLoginWindow";
 
 const store = getStore();
 
@@ -82,6 +84,9 @@ export const setIpcMainListener = () => {
     menu.popup({
       window: BrowserWindow.getFocusedWindow()!,
     });
+  });
+  ipcMain.handle(IpcRenderToMain.portalLogin, () => {
+    return openPortalLoginWindow(getMainWindow() ?? undefined);
   });
   ipcMain.on(IpcRenderToMain.getDataPath, (e, key: string) => {
     switch (key) {

@@ -101,6 +101,8 @@ const saveFileToDisk = async ({
   return uniqueSavePath;
 };
 
+const portalLogin = () => ipcRenderer.invoke("portalLogin");
+
 const Api: IElectronAPI = {
   getDataPath,
   getVersion: () => process.version,
@@ -113,6 +115,7 @@ const Api: IElectronAPI = {
   ipcSendSync,
   getFileByPath,
   saveFileToDisk,
+  portalLogin,
 };
 
 contextBridge.exposeInMainWorld("electronAPI", Api);

@@ -29,7 +29,7 @@ function createSplashWindow() {
 export function createMainWindow() {
   createSplashWindow();
   mainWindow = new BrowserWindow({
-    title: "Dev-ER",
+    title: "BCS Beam",
     icon: join(global.pathConfig.publicPath, "favicon.ico"),
     frame: false,
     show: false,
@@ -257,3 +257,5 @@ export const getWebContents = (): Electron.WebContents => {
   if (!mainWindow) throw new Error("main window is undefined");
   return mainWindow.webContents;
 };
+
+export const getMainWindow = (): BrowserWindow | null => mainWindow;
