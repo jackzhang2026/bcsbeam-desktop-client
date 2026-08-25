@@ -84,6 +84,26 @@ later WebView-into-portal ticket milestone rather than throwaway work.
   cross-platform later is meant to be a one-line scope change, not an
   architecture change.
 
+## Verification status (2026-08-26)
+
+`pnpm install` / `tsc --noEmit` / `eslint` / `pnpm run build` all pass clean
+(confirmed on the FINOS dev box). Beyond that, this repo has **not** been
+run end-to-end against a real customer-portal account — the dev sandbox
+this was built in has `ELECTRON_RUN_AS_NODE=1` set globally (a deliberate
+guardrail against spawning real Electron/Chromium GUI processes there), so
+no actual `BrowserWindow` can be opened from it, with or without Xvfb. What
+_was_ verified there instead: `scripts/verify-token-exchange-script.mjs`
+(`pnpm run verify:token-exchange`) extracts the exact `executeJavaScript`
+snippet from `electron/main/portalLoginWindow.ts` by regex (not a
+hand-copied duplicate that could drift) and runs it under plain Node with a
+mocked `window.localStorage`/`fetch`, covering: no token yet, wrong portal
+type, a successful exchange (asserting the exact URL/method/headers sent),
+and a non-ok broker response. This is a real check of that script's own
+branching logic, but it is **not** a substitute for actually opening the
+window, navigating to the live portal, logging in, and confirming the
+poller detects it — that still needs to happen on a machine that can run a
+real Electron window (e.g. Jack's own dev machine, or CI).
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,
