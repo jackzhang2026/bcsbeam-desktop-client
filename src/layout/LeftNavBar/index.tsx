@@ -1,4 +1,4 @@
-import { FileTextOutlined, RightOutlined } from "@ant-design/icons";
+import { FileTextOutlined, LaptopOutlined, RightOutlined } from "@ant-design/icons";
 import { Badge, Divider, Layout, Popover, Upload, UploadProps } from "antd";
 import clsx from "clsx";
 import i18n, { t } from "i18next";
@@ -63,12 +63,21 @@ const NavList: NavItemType[] = [
     title: t("placeholder.tickets"),
     path: "/tickets",
   },
+  {
+    iconNode: <LaptopOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
+    iconNodeActive: (
+      <LaptopOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
+    ),
+    title: t("placeholder.devices"),
+    path: "/devices",
+  },
 ];
 
 i18n.on("languageChanged", () => {
   NavList[0].title = t("placeholder.chat");
   NavList[1].title = t("placeholder.contact");
   NavList[2].title = t("placeholder.tickets");
+  NavList[3].title = t("placeholder.devices");
 });
 
 const resizeFile = (file: File): Promise<File> =>

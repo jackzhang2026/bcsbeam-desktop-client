@@ -50,6 +50,13 @@ const router = createHashRouter([
               return { Component: Tickets };
             },
           },
+          {
+            path: "devices",
+            async lazy() {
+              const { Devices } = await import("@/pages/devices");
+              return { Component: Devices };
+            },
+          },
         ],
       },
       {

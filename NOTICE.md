@@ -355,6 +355,36 @@ global.scss`) applies navy text color directly to every unstyled `<div>`,
   real Electron/BrowserWindow here) screenshotting the built `dist/`
   through `vite preview`, in both `en` and `zh`.
 
+## Phase 2 kickoff: My Devices (2026-08-26)
+
+First Phase 2 slice: a "My Devices" nav entry, same WebView-into-portal
+shape as Tickets — the FINOS side shipped a real `GET /api/it-audit/
+customer-portal/devices/` endpoint (`it_audit/portal_customer_views.py`,
+customer-scoped, trimmed field set per CLAUDE.md §6k) plus a Customer
+Portal page consuming it (`frontend/src/pages/CustomerPortal/
+MyDevices.tsx`), and this client just points a `<webview>` at that real
+page, exactly like Tickets does at the real ticket pages.
+
+Refactored the Tickets/Devices webview logic into a shared
+`src/components/PortalWebView.tsx` (`{ url }` prop) rather than
+copy-pasting the loading-spinner/`did-stop-loading`/`new-window` wiring a
+second time — both pages are now a 3-line component. `VITE_PORTAL_DEVICES_URL`
+added to `.env` alongside `VITE_PORTAL_TICKETS_URL`, same renderer-side/
+`import.meta.env` convention. Nav entry uses `LaptopOutlined` (matching the
+icon used for the same feature in the Customer Portal's own web sidebar,
+`frontend/src/pages/CustomerPortal/Layout.tsx`) at the same palette as the
+Tickets entry.
+
+**Not done in this pass:** the device list's "Request Support" button
+(backend action already live) creates a `MeshSupportRequest` that a
+technician picks up, but does not yet hand the customer a live chat —
+see the backend commit's own docstring for why that's real follow-up
+work, not an oversight. The remote-support tray entry itself (bridging
+the customer's already-installed Mesh/RustDesk agents directly, per the
+original Phase 2 scope) hasn't started; "My Devices" was the natural
+first slice since it needed no new client-side plumbing beyond what
+Tickets already proved out.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,
