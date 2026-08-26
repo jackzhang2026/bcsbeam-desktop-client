@@ -89,10 +89,22 @@ portal_permissions.py` — a test account needs one of those two roles, or
 - **Remote-support tray entry** (`electron/main/trayManage.ts` in
   `bcsbeam-desktop-client`) — "Get Remote Support" tray item → shows the
   window → navigates to the Devices tab.
-- **Local-device auto-detect** (`electron/preload/index.ts`'s
-  `getHostname()`, `src/pages/devices/index.tsx` appending `?localHost=`,
-  `MyDevices.tsx` matching it) — shows a "this looks like your computer"
-  one-click banner when exactly one device matches by hostname.
+- **Local-device auto-detect, two signals** (`electron/preload/index.ts`'s
+  `getHostname()` and `getRustdeskId()`, `src/pages/devices/index.tsx`
+  appending `?localHost=`/`?localRustdeskId=`, `MyDevices.tsx` matching) —
+  shows a "this looks like your computer" one-click banner. `getRustdeskId()`
+  (added `2af0367`, one day after the original hostname-only version) is
+  a REAL exact match — it shells out to `rustdesk.exe --get-id` locally,
+  the same CLI flag the backend's own probe already uses server-side. It's
+  the preferred signal; hostname is only the fallback for a device with no
+  RustDesk id reported yet. Confirmed by direct research: MeshCentral's own
+  agent has no equivalent locally-readable node id anywhere in this
+  project's installer, which is why hostname shipped first and RustDesk is
+  the real upgrade, not a guess — see register #5 for the full finding.
+  **This `getRustdeskId()` shell-out has never run on a real Windows machine
+  with RustDesk actually installed — Stage A below should specifically
+  confirm it finds a real id when RustDesk is present, not just that it
+  fails gracefully when it isn't.**
 - **OpenIM identity bridge** (`backend/openim_bridge/services.py`'s
   `add_customer_to_support_group`, wired into `request_support`) — a
   successful request-support call now also invites this portal user's own
@@ -139,17 +151,26 @@ mechanics around it).
 4. Click it. Confirm: the main window is shown/focused, AND it navigates to
    the Devices tab (internal route `/devices`).
 5. Open DevTools on that window (or inspect the `<webview>` element some
-   other way) and confirm the `<webview>`'s `src` attribute is
-   `https://customer.centoffer.com/customer-portal/devices?localHost=<your
-real machine's hostname>` — i.e., `getHostname()` actually returned your
-   real OS hostname and it actually got appended. This is the one piece
-   that is IMPOSSIBLE to fake or infer from a sandbox — `os.hostname()`
-   only means something on a real machine.
-6. Also open the Devices tab from the normal left-nav item (not the tray) —
-   confirm it works the same way (the hostname auto-detect is independent
-   of how you got to the page).
+   other way) and confirm the `<webview>`'s `src` attribute carries
+   `?localHost=<your real hostname>` (from `getHostname()`) and, **if this
+   machine has RustDesk installed**, `&localRustdeskId=<a numeric id>`
+   (from `getRustdeskId()` — see §2's note on this specific signal never
+   having run against a real RustDesk install before). If RustDesk is NOT
+   installed on your test machine, confirm `localRustdeskId` is simply
+   absent (not present-but-empty, not a crash) — that's the correct
+   graceful-failure behavior, not a bug. This whole step is the one piece
+   that is IMPOSSIBLE to fake or infer from a sandbox — real hostnames and
+   real RustDesk installs only exist on a real machine.
+6. If you have a Windows machine with RustDesk actually installed, run
+   `rustdesk.exe --get-id` yourself from a terminal first and compare it
+   character-for-character against what showed up in the webview URL in
+   step 5 — this is the actual proof the shell-out works, not just that it
+   didn't crash.
+7. Also open the Devices tab from the normal left-nav item (not the tray) —
+   confirm it works the same way (auto-detect is independent of how you
+   got to the page).
 
-**Report**: for each of steps 3–6, pass/fail and what you actually saw
+**Report**: for each of steps 3–7, pass/fail and what you actually saw
 (screenshot or exact text), not just "worked".
 
 ### 3.2 Stage B — real My Devices data (needs a backend + frontend deploy — get approval FIRST)
