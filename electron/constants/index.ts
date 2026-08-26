@@ -15,4 +15,5 @@ export const IpcRenderToMain = {
   showInputContextMenu: "showInputContextMenu",
   getDataPath: "getDataPath",
   portalLogin: "portalLogin",
+  openExternal: "openExternal",
 };

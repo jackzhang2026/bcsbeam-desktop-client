@@ -238,6 +238,62 @@ single-tray shell polish (tray menu wording, window title bar treatment)
 is still Phase 1 §6 step 3 work, not done by this commit — this commit is
 icon assets only.
 
+## Ticket entry via embedded WebView (2026-08-26, Phase 1 §6 step 4)
+
+Tickets are not reimplemented in this client — same licensing-boundary
+reasoning as chat login (see "Login architecture finding" above): a new
+"Tickets" nav entry loads the real, already-authenticated customer-portal
+ticket pages (`https://customer.centoffer.com/customer-portal/tickets`,
+confirmed against the actual route in `frontend/src/App.tsx` — list/create/
+`:id` detail all live under `/customer-portal/tickets*`) in an Electron
+`<webview>`, not a reimplementation of ticket business logic.
+
+**Auth is free here, by construction, not by a new mechanism:** the login
+window (`electron/main/portalLoginWindow.ts`) already navigated the real
+portal origin in Electron's _default_ session/partition and left it signed
+in there (localStorage `portal_token` etc. live on that origin). The
+`<webview>` uses that same default partition — no partition attribute set,
+same as the login window — so it inherits that localStorage session and
+never prompts to log in again. If a later change ever gives the login
+window (or this webview) an explicit `partition="persist:..."`/ephemeral
+partition, this stops working silently; keep both on the default partition
+together.
+
+**Correction to earlier tracking docs:** `BCS_BEAM_UNIFIED_CLIENT_HANDOFF_
+20260825.md` §3.3 cites "the OLDER `BCS_BEAM_UNIFIED_AGENT_DESIGN_20260819.md`
+§10" as prior art for this exact WebView approach, including a "device-
+token→portal-session exchange design sketch." That file does not exist
+anywhere in the repo (checked, not assumed) — it was either never actually
+committed or the reference itself was wrong. No such exchange was needed in
+the end: shared-session inheritance (above) covers it. Don't spend time
+hunting for that doc; it isn't there.
+
+Changed: `electron/main/windowManage.ts` (`webviewTag: true` on the main
+window's `webPreferences` — required for `<webview>` to work at all),
+`electron/main/ipcHandlerManage.ts` + `electron/preload/index.ts` +
+`electron/constants/index.ts` (new `openExternal` IPC round trip —
+`shell.openExternal()`, http(s)-only, gated the same way the main window's
+`setWindowOpenHandler` already is — for links the portal page tries to pop
+into a new tab, which a bare `<webview>` has nowhere to put), new
+`src/pages/tickets/index.tsx` + `/tickets` route + LeftNavBar entry (real
+`@ant-design/icons` `FileTextOutlined`, colored to match the existing
+message/contact PNG icon pair's palette exactly — no PNG pair of its own,
+and no hand-drawn approximation, per CLAUDE.md §6g), `VITE_PORTAL_TICKETS_URL`
+in `.env` (renderer-side, read via `import.meta.env` — distinct from
+`VITE_PORTAL_LOGIN_URL`, which the _main_ process reads via `process.env`).
+
+**Not done by this change, deliberately:** `did-stop-loading`/`new-window`
+are wired with plain `addEventListener` casts, not `Electron.WebviewTag`/
+`Electron.NewWindowEvent` types — referencing electron's own ambient global
+namespace in the renderer's `tsconfig` pulls in its global `File.path:
+string` augmentation, which conflicts with this repo's own optional-path
+`FileWithPath` (chat file uploads) and broke typecheck outside this feature
+entirely; a narrow local `interface NewWindowEvent extends Event { url:
+string }` was enough for what this page actually needs. Tray shell polish
+(§6 step 3: menu wording, window title bar treatment) is unrelated to this
+change and still open — see the icon-assets section above for what's
+already been assessed there.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,

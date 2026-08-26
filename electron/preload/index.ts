@@ -112,6 +112,7 @@ const saveFileToDisk = async ({
 };
 
 const portalLogin = () => ipcRenderer.invoke("portalLogin");
+const openExternal = (url: string) => ipcRenderer.invoke("openExternal", url);
 
 const Api: IElectronAPI = {
   getDataPath,
@@ -126,6 +127,7 @@ const Api: IElectronAPI = {
   getFileByPath,
   saveFileToDisk,
   portalLogin,
+  openExternal,
 };
 
 contextBridge.exposeInMainWorld("electronAPI", Api);

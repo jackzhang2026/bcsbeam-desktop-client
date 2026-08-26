@@ -43,6 +43,13 @@ const router = createHashRouter([
             },
             children: contactRoutes,
           },
+          {
+            path: "tickets",
+            async lazy() {
+              const { Tickets } = await import("@/pages/tickets");
+              return { Component: Tickets };
+            },
+          },
         ],
       },
       {

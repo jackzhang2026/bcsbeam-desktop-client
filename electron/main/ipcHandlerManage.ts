@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
+import { BrowserWindow, Menu, app, dialog, ipcMain, shell } from "electron";
 import {
   clearCache,
   closeWindow,
@@ -87,6 +87,15 @@ export const setIpcMainListener = () => {
   });
   ipcMain.handle(IpcRenderToMain.portalLogin, () => {
     return openPortalLoginWindow(getMainWindow() ?? undefined);
+  });
+  // Used by the embedded ticket <webview> (src/pages/tickets) — links that
+  // page tries to open in a new tab/window should go to the OS browser
+  // instead of a bare Electron webview popup, same as the main window's own
+  // setWindowOpenHandler in windowManage.ts.
+  ipcMain.handle(IpcRenderToMain.openExternal, (_, url: string) => {
+    if (typeof url === "string" && /^https?:\/\//.test(url)) {
+      shell.openExternal(url);
+    }
   });
   ipcMain.on(IpcRenderToMain.getDataPath, (e, key: string) => {
     switch (key) {

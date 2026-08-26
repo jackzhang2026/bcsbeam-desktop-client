@@ -48,6 +48,9 @@ export function createMainWindow() {
       sandbox: false,
       devTools: true,
       webSecurity: false,
+      // Needed for the embedded ticket <webview> (src/pages/tickets) that
+      // loads the real customer-portal ticket pages in place.
+      webviewTag: true,
     },
   });
 

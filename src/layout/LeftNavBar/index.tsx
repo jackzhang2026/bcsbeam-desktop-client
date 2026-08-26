@@ -1,4 +1,4 @@
-import { RightOutlined } from "@ant-design/icons";
+import { FileTextOutlined, RightOutlined } from "@ant-design/icons";
 import { Badge, Divider, Layout, Popover, Upload, UploadProps } from "antd";
 import clsx from "clsx";
 import i18n, { t } from "i18next";
@@ -26,7 +26,23 @@ import PersonalSettings from "./PersonalSettings";
 
 const { Sider } = Layout;
 
-const NavList = [
+// Matches the existing nav icon pair's palette exactly (nav_bar_contact.png
+// / _active.png: rgb(136,155,177) / rgb(30,116,222)) — Tickets has no PNG
+// pair of its own, so it uses a real @ant-design/icons glyph colored to
+// match instead of hand-drawing new artwork (CLAUDE.md §6g).
+const NAV_ICON_COLOR = "#889BB1";
+const NAV_ICON_COLOR_ACTIVE = "#1E74DE";
+
+interface NavItemType {
+  icon?: string;
+  icon_active?: string;
+  iconNode?: React.ReactNode;
+  iconNodeActive?: React.ReactNode;
+  title: string;
+  path: string;
+}
+
+const NavList: NavItemType[] = [
   {
     icon: message_icon,
     icon_active: message_icon_active,
@@ -39,11 +55,20 @@ const NavList = [
     title: t("placeholder.contact"),
     path: "/contact",
   },
+  {
+    iconNode: <FileTextOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
+    iconNodeActive: (
+      <FileTextOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
+    ),
+    title: t("placeholder.tickets"),
+    path: "/tickets",
+  },
 ];
 
 i18n.on("languageChanged", () => {
   NavList[0].title = t("placeholder.chat");
   NavList[1].title = t("placeholder.contact");
+  NavList[2].title = t("placeholder.tickets");
 });
 
 const resizeFile = (file: File): Promise<File> =>
@@ -62,9 +87,11 @@ const resizeFile = (file: File): Promise<File> =>
     );
   });
 
-type NavItemType = (typeof NavList)[0];
-
-const NavItem = ({ nav: { icon, icon_active, title, path } }: { nav: NavItemType }) => {
+const NavItem = ({
+  nav: { icon, icon_active, iconNode, iconNodeActive, title, path },
+}: {
+  nav: NavItemType;
+}) => {
   const resolvedPath = useResolvedPath(path);
   const { navigator } = React.useContext(UNSAFE_NavigationContext);
   const toPathname = navigator.encodeLocation
@@ -113,7 +140,11 @@ const NavItem = ({ nav: { icon, icon_active, title, path } }: { nav: NavItemType
         )}
         onClick={tryNavigate}
       >
-        <img width={20} src={isActive ? icon_active : icon} alt="" />
+        {icon ? (
+          <img width={20} src={isActive ? icon_active : icon} alt="" />
+        ) : (
+          (isActive ? iconNodeActive : iconNode) ?? null
+        )}
         <div className="mt-1 text-xs text-gray-500">{title}</div>
       </div>
     </Badge>

@@ -22,6 +22,10 @@ export interface IElectronAPI {
     token: string;
     expireTimeSeconds: number;
   }>;
+  /** Opens an http(s) URL in the OS default browser. Used by the embedded
+   * ticket <webview> (src/pages/tickets) for links that try to open in a
+   * new tab/window — a bare <webview> has nowhere else to put those. */
+  openExternal: (url: string) => Promise<void>;
 }
 
 declare global {
