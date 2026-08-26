@@ -23,8 +23,8 @@ earlier one passed.
 ## 0. TL;DR — do this first
 
 1. Confirm your environment can open real GUI windows (see the check above).
-2. Get the code — **three repos, and two of them must come from THIS
-   server, not GitHub** (§1 explains why).
+2. Get the code — **two of the three repos are on GitHub now, the main
+   FINOS repo still isn't** (§1 explains why).
 3. Run **Stage A** (§4) — pure Electron client mechanics. Needs nothing
    deployed. Do this regardless of what else is or isn't approved.
 4. **Before Stage B or C**: read §2 and §3 — both need things deployed or
@@ -41,34 +41,33 @@ earlier one passed.
 
 ## 1. Getting the code — read this before you clone anything
 
-Three repos are involved. **Do not `git clone` two of them from their
-public GitHub remotes** — their latest commits are intentionally sitting
-**local-only** on this server (`ecs-user@<this box>`), per the push
-discipline in `CLAUDE.md` §6j: "日常开发只提交本地，部署上生产的同时才推
-公共 GitHub 仓库并打 tag" (commit locally during development; push to the
-public remote only at actual deploy time). Pushing them now, just to make
-this handoff easier, would itself be the violation that rule exists to
-prevent — don't do it, and don't ask this session to do it either.
+**Update (2026-08-27, same day as this handoff was written):** the
+"commit locally, push only at deploy time" policy this section originally
+described turned out not to match how `bcsbeam-desktop-client` and
+`support-chat-web` had actually been operated (every commit had been
+pushed immediately in both repos' real history) — that discrepancy was
+reported to Jack rather than silently resolved, and **Jack approved
+continuing the actual practice**: push every commit as you go. Both repos
+are pushed and current as of this handoff (`bcsbeam-desktop-client`
+`1a71037`, `support-chat-web` `603fccd`) — clone them from GitHub normally:
 
-| Repo                                                           | Where the LATEST code actually is                                                                                                                                                                                                                                                                  | How to get it onto your machine                                                                                                                                                                                                                                          |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `bcsbeam-desktop-client`                                       | `/home/ecs-user/bcsbeam-desktop-client` on this box, HEAD `babfd5d` at handoff time — GitHub's `main` is behind (last pushed: `c66a66f`)                                                                                                                                                           | `git clone <your-ssh-alias-for-this-box>:/home/ecs-user/bcsbeam-desktop-client` (same SSH access you already use to reach this box under your personal account — do not use `git@github.com:jackzhang2026/bcsbeam-desktop-client.git`)                                   |
-| `support-chat-web`                                             | `/home/ecs-user/support-chat-web` on this box, HEAD `603fccd` — GitHub's `main` is behind                                                                                                                                                                                                          | same pattern: `git clone <ssh-alias>:/home/ecs-user/support-chat-web`                                                                                                                                                                                                    |
-| The main FINOS repo (`/home/ecs-user`, branch `feature/logon`) | This one's `origin` (`git@github.com:jackzhang2026/Finance2026.git`) is a private repo already used for normal push/pull — but the Phase 2 commits (`e15a44718`, `2ebba34a7`, `f483b3c86`, `9d8cf62bc`, and others) are **not pushed there yet either** — same clone-from-the-box approach applies | `git clone <ssh-alias>:/home/ecs-user <local-path>` — **this is a large, shared, actively-worked-on repo** (read `CLAUDE.md` at its root in full before touching it — commit/branch discipline there is not optional and differs from the other two repos' looser rules) |
+| Repo                     | Clone from                                                |
+| ------------------------ | --------------------------------------------------------- |
+| `bcsbeam-desktop-client` | `git@github.com:jackzhang2026/bcsbeam-desktop-client.git` |
+| `support-chat-web`       | `git@github.com:jackzhang2026/Chat-Integration.git`       |
 
-If you don't already have SSH access to this box from your machine, stop
-and ask — don't set up new access yourself (CLAUDE.md §6f: personal
-accounts, scoped sudo, no shortcuts).
-
-**Once you're done and have real results:** `bcsbeam-desktop-client` and
-`support-chat-web` push freely to their own GitHub remotes at any time —
-they're small, purpose-built public repos, verification/dev commits from a
-real-machine session are exactly what belongs there (unlike deploy-time-only
-pushes, which are about not exposing security-relevant changes early —
-verification results carry no such risk). The main FINOS repo does NOT get
-pushed by you — leave your commits local on this box (or push only if the
-person who gave you this handoff explicitly says to) and report back per §5
-instead.
+**The main FINOS repo is different — this part of the original guidance
+still stands.** It has its own separate, unrelated commit discipline
+(`CLAUDE.md` at its root — a large, actively shared tree with its own
+rules that are not optional), and its Phase 2 commits (`e15a44718`,
+`2ebba34a7`, `f483b3c86`, `9d8cf62bc`, and others) are genuinely not on its
+GitHub remote yet. Get it via `git clone <ssh-alias-for-this-box>:
+/home/ecs-user <local-path>` (SSH access under your own personal account —
+if you don't have it, stop and ask, don't set one up yourself, CLAUDE.md
+§6f). **Do not push anything to the main FINOS repo yourself** — leave
+your commits there local and report back per §5 instead; that repo's push
+policy is a separate decision from the one Jack just made for the other
+two.
 
 ---
 
