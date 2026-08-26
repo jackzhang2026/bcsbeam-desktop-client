@@ -71,22 +71,29 @@ export const setAppGlobalData = () => {
     preload: join(__dirname, "../preload/index.js"),
   };
 
-  if (isProd) {
-    fs.promises
-      .readdir(global.pathConfig.logsPath)
-      .catch(
-        (err) =>
-          err.code === "ENOENT" &&
-          fs.promises.mkdir(global.pathConfig.logsPath, { recursive: true }),
-      );
-    fs.promises
-      .readdir(global.pathConfig.sdkResourcesPath)
-      .catch(
-        (err) =>
-          err.code === "ENOENT" &&
-          fs.promises.mkdir(global.pathConfig.sdkResourcesPath, { recursive: true }),
-      );
-  }
+  // NOT gated behind `if (isProd)` (as it was before): the OpenIM Go SDK
+  // needs sdkResourcesPath/logsPath to exist to open its local SQLite db in
+  // dev mode too (`pnpm dev`), not just in packaged builds. With the
+  // directory missing, IMSDK.login() fails with errCode 10005 / "unable to
+  // open database file: ... The system cannot find the path specified" —
+  // found while running Stage B of
+  // HANDOFF_ELECTRON_LOGIN_VERIFICATION_20260826.md against a real portal
+  // login (real token, so it got past the point the mock server could
+  // exercise, and hit this dev-only gap).
+  fs.promises
+    .readdir(global.pathConfig.logsPath)
+    .catch(
+      (err) =>
+        err.code === "ENOENT" &&
+        fs.promises.mkdir(global.pathConfig.logsPath, { recursive: true }),
+    );
+  fs.promises
+    .readdir(global.pathConfig.sdkResourcesPath)
+    .catch(
+      (err) =>
+        err.code === "ENOENT" &&
+        fs.promises.mkdir(global.pathConfig.sdkResourcesPath, { recursive: true }),
+    );
 };
 
 export const getIsForceQuit = () =>

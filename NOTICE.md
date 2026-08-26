@@ -167,11 +167,43 @@ a reason unrelated to the code this task covers. Confirmed real end-to-end
 navigation by recording every `framenavigated` event rather than polling
 after the fact.
 
-**Stage B (real `https://customer.centoffer.com` login) has not been run
-yet** — per the handoff, that needs either a designated test account's
-credentials or Jack performing the actual login click, neither of which
-should be self-obtained. Typecheck and build both stayed clean
-(`pnpm run typecheck`, `pnpm run build`) with both fixes in place.
+**2026-08-26, Stage B run (real `https://customer.centoffer.com` login,
+Jack's own test account, Jack performing the actual login click per the
+handoff's credential-handling instructions):** `pnpm dev` against
+production (`.env`'s real URLs, no mock/env override). "Sign in with BCS
+Beam Portal" opened a real child window loading the actual
+`customer.centoffer.com/customer-portal/login` page; Jack logged in there;
+the token exchange returned a real JWT (`UserID: cust_1`) and the window
+closed itself, matching Stage A's mechanics exactly.
+
+Then hit a **third real bug**, this one not exercisable by Stage A's mock
+token (which never got far enough to reach it): `IMSDK.login()` failed with
+`errCode 10005` — `unable to open database file: ... The system cannot find
+the path specified` — for the SQLite db `electron/main/appManage.ts`
+computes at `app.getPath("userData")/OpenIMData/sdkResources`.
+`setAppGlobalData()` only created that directory (and `.../OpenIMData/logs`)
+`if (isProd)`, where `isProd = app.isPackaged` — `false` under `pnpm dev`.
+There's no reason dev mode should skip creating a directory the SDK
+unconditionally needs, in dev or packaged; this was a pre-existing gap in
+the upstream dev-mode path, just never exercised end-to-end before (the
+mock's fake token never got past its own, different, expected failure to
+reach the real IMSDK call). Fixed by dropping the `if (isProd)` gate so both
+directories are always created. Confirmed on the next auto-restart
+(`vite-electron-plugin` rebuilds+relaunches the Electron process on a
+main-process file change): `loginCheck()` found the already-stored
+credentials from the prior attempt, `IMSDK.login()` succeeded, a real
+160KB+ `OpenIM_v3_cust_1.db` was created, and the app rendered the actual
+post-login chat UI (Messages/Contacts sidebar, "Create Group Chat" panel —
+confirmed via Jack's own screenshot).
+
+**End-to-end result: the portal login flow this task was scoped to verify
+works, real account to real chat UI.** `pnpm run typecheck` and
+`pnpm run build` both stayed clean with all three fixes in place (see
+commit history for the exact diffs — `electron/utils/index.ts`,
+`electron/preload/index.ts`, `electron/main/appManage.ts`). The test
+account used for this run should be disposed of per Jack's own instruction
+once this is read; that disposal is outside this repo's scope (it's a
+customer-portal account, managed in the main FINOS backend, not here).
 
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
