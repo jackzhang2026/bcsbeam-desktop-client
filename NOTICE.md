@@ -112,6 +112,67 @@ thing against `https://customer.centoffer.com`). Update this section with
 the outcome once that's done, rather than adding a third parallel status
 note — keep the verification story in one place.
 
+**2026-08-26, Stage A run (real Electron window, no ELECTRON_RUN_AS_NODE
+limitation on this machine):** Stage A **initially failed**, then **passed**
+after fixing two real bugs found here — both were silently crashing the
+preload script before `contextBridge.exposeInMainWorld` ran, so
+`window.electronAPI` was `undefined` in **every** real Electron launch (not
+specific to login), invisible in the prior sandbox because no real preload
+script ever executed there:
+
+1. `electron/utils/index.ts` computed `isProd` as `app.isPackaged` at module
+   top level. `app` is a main-process-only Electron export; this module is
+   also imported by `electron/preload/index.ts` (for `getDataPath`'s
+   `isProd` check), where `app` is `undefined`, so `app.isPackaged` threw a
+   `TypeError` immediately on import. Fixed:
+   `electron.app ? electron.app.isPackaged : !process.defaultApp` (the
+   latter is Electron's documented "launched unpackaged" signal for
+   contexts where `app` isn't available).
+2. `electron/preload/index.ts` did `import { Platform } from
+"@openim/wasm-client-sdk"` at the top level. That package's module top
+   level unconditionally calls `initWorker()`, which constructs `new
+URL('index.js', document.baseURI)` — and at the moment a preload script
+   first runs (before the window's `loadURL()`/`loadFile()` has navigated),
+   `document.baseURI` is still `"about:blank"`, so the relative `URL(...)`
+   construction throws `TypeError: Failed to construct 'URL': Invalid URL`.
+   Fixed by moving the `require("@openim/wasm-client-sdk")` inside
+   `getPlatform()` so it only runs after real navigation, when
+   `document.baseURI` is a real URL.
+
+With both fixed, a full Stage A run (via a Playwright-Electron harness
+driving the real, built app — not the dev server — against
+`scripts/mock-portal-login-server.mjs`, with a fresh `--user-data-dir` per
+run to avoid stale-localStorage/single-instance-lock artifacts across runs)
+confirmed everything the handoff asked Stage A to confirm: the "Sign in
+with BCS Beam Portal" button opens a real child `BrowserWindow`, it loads
+the (mock) login page, clicking through the mock login writes
+`portal_token`/`portal_type` to that window's `localStorage`, the
+`checkForLogin()` poller detects it within one 800ms tick, the
+`executeJavaScript` token-exchange fetch fires and succeeds, the login
+window closes itself (~0.5–1s after the simulated login, well inside the
+spec's ~1-2s), and the main window's hash-router URL genuinely transitions
+to `/chat` (confirmed via Playwright's `framenavigated` events, not just a
+post-hoc URL check — see caveat below on why a simple post-hoc check is
+misleading here).
+
+**Caveat, not a portal-login bug:** immediately after reaching `/chat`, the
+app's own pre-existing `tryLogin()` effect (`src/layout/useGlobalEvents.tsx`,
+untouched by this feature) attempts a real `IMSDK.login()` with the mock's
+fake token, which fails (`errCode 10005`, SQLite db-init error — expected,
+per the handoff's own prediction, since the mock token isn't a real OpenIM
+token), and that failure's catch block navigates back to `/login`. So a
+naive check of "what URL is the window on now" reports `/login` and looks
+like navigation never happened — it did, transiently, and bounced back for
+a reason unrelated to the code this task covers. Confirmed real end-to-end
+navigation by recording every `framenavigated` event rather than polling
+after the fact.
+
+**Stage B (real `https://customer.centoffer.com` login) has not been run
+yet** — per the handoff, that needs either a designated test account's
+credentials or Jack performing the actual login click, neither of which
+should be self-obtained. Typecheck and build both stayed clean
+(`pnpm run typecheck`, `pnpm run build`) with both fixes in place.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,

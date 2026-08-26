@@ -4,9 +4,19 @@ import { DataPath, IElectronAPI } from "./../../src/types/globalExpose.d";
 import { contextBridge, ipcRenderer } from "electron";
 import { isProd } from "../utils";
 import "@openim/electron-client-sdk/lib/preload";
-import { Platform } from "@openim/wasm-client-sdk";
 
+// NOT `import { Platform } from "@openim/wasm-client-sdk"` at the top level:
+// that package's module top-level unconditionally calls initWorker(), which
+// constructs `new URL('index.js', document.baseURI)` — and at the point this
+// preload script first runs (before the window's loadURL()/loadFile() has
+// navigated), `document.baseURI` is still "about:blank", which throws
+// "Failed to construct 'URL': Invalid URL". That exception used to kill the
+// whole preload script before contextBridge.exposeInMainWorld ran, silently
+// leaving `window.electronAPI` undefined in every renderer. Deferring the
+// require until getPlatform() is actually called (well after real
+// navigation, when document.baseURI is a real URL) avoids it.
 const getPlatform = () => {
+  const { Platform } = require("@openim/wasm-client-sdk");
   if (process.platform === "darwin") {
     return Platform.MacOSX;
   }
