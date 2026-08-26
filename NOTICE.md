@@ -69,11 +69,6 @@ later WebView-into-portal ticket milestone rather than throwaway work.
 
 **Not yet done** (tracked in the register, not silently skipped):
 
-- No app icon/logo assets yet — still using upstream's own icons under
-  `dist/icons/`. BCS Beam brand assets (see the RustDesk fork's `res/`
-  artwork for the existing approved v1.3 brand system: steel-gradient "B"
-  tile, navy `#081c33` background) need to be produced for this app's
-  `dist/icons/` once real UI work starts, not part of this scaffolding pass.
 - No login wiring yet — Phase 1's actual chat-over-Token-Broker work
   (`POST /api/openim/token/`, see handoff doc §3.1) has not started. This
   commit is scaffolding only: confirms the fork builds/rebrands cleanly
@@ -204,6 +199,44 @@ commit history for the exact diffs — `electron/utils/index.ts`,
 account used for this run should be disposed of per Jack's own instruction
 once this is read; that disposal is outside this repo's scope (it's a
 customer-portal account, managed in the main FINOS backend, not here).
+
+## Brand assets (2026-08-26)
+
+Replaced upstream's own icons under `public/icons/` (Vite copies `public/`
+verbatim into `dist/`, which is what `electron-builder.json5` reads) with
+the approved BCS Beam v1.3 visual system — same master artwork already
+used by `rustdesk-dedicated-repo` (`res/icon.png`/`res/mac-icon.png`,
+identical 1024×1024 steel-gradient "B" tile; `res/tray-icon.ico`, the
+purpose-built line-frame variant for small tray sizes), not a new design:
+
+- `public/icons/icon.png` (512×512), `public/icons/mac_icon.png`
+  (1024×1024) — resized from the master artwork, same filenames/sizes the
+  repo already expected.
+- `public/icons/icon.ico` / `public/favicon.ico` — regenerated as proper
+  multi-size `.ico`s (16/32/48/64/128/256 and 16/32/48 respectively) from
+  the master, via Pillow (no ImageMagick in this environment) — upstream's
+  originals were single-size only.
+- `public/icons/tray.png` (20×20) / `tray@2x.png` (40×40) — from the
+  line-frame variant, matching the exact sizes upstream already used (the
+  filled gradient tile reads poorly that small; the outlined variant was
+  built for this).
+- `package.json` `productName: "BCS Beam"` added — Electron's `app.getName()`
+  (used for the tray tooltip, macOS menu bar name, etc.) falls back to the
+  bare `name` field without it, which would have shown
+  `bcsbeam-desktop-client` instead.
+- `src/utils/storage.ts`: `localForage` database name `OpenCorp-Config` →
+  `BCSBeam-Config` (internal-only, not user-visible, but no reason to keep
+  it while the only data behind it is disposable test-account state).
+
+**Not changed / left for later, deliberately:** the login page's own
+tagline copy (`placeholder.title`/`subTitle` in `src/i18n/resources/*.json`,
+generic "Online office collaboration" text) and two now-dead i18n keys
+(`placeholder.welcome`/`qrCodeLoginTitle`, unreferenced since
+`LoginForm.tsx`/`RegisterForm.tsx` were deleted) — cosmetic copy, not part
+of this brand-asset pass, safe to leave as orphaned strings for now. Full
+single-tray shell polish (tray menu wording, window title bar treatment)
+is still Phase 1 §6 step 3 work, not done by this commit — this commit is
+icon assets only.
 
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 

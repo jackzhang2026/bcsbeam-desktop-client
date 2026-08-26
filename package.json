@@ -1,5 +1,6 @@
 {
   "name": "bcsbeam-desktop-client",
+  "productName": "BCS Beam",
   "version": "0.1.0",
   "main": "dist-electron/main/index.js",
   "description": "BCS Beam desktop client — chat, tickets, device/self-service, and remote-support entry, extending OpenIM's official Electron reference client.",
