@@ -2,6 +2,7 @@ export default {
   system: {
     showWindow: "ShowWindow",
     hideWindow: "HideWindow",
+    remoteSupport: "Get Remote Support",
     hide: "Hide",
     about: "About",
     quit: "Quit",

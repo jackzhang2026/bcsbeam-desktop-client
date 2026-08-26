@@ -485,7 +485,7 @@ export function useGlobalEvent() {
   };
 
   const setIpcListener = () => {
-    return window.electronAPI?.subscribe("appResume", () => {
+    const unsubscribeAppResume = window.electronAPI?.subscribe("appResume", () => {
       if (resume.current) {
         return;
       }
@@ -494,5 +494,18 @@ export function useGlobalEvent() {
         resume.current = false;
       }, 5000);
     });
+    // Phase 2 (TASK-062): the tray's "Get Remote Support" item
+    // (electron/main/trayManage.ts) can't drive react-router from the main
+    // process, so it asks the renderer to navigate instead.
+    const unsubscribeNavigate = window.electronAPI?.subscribe(
+      "navigateTo",
+      (path: unknown) => {
+        if (typeof path === "string") navigate(path);
+      },
+    );
+    return () => {
+      unsubscribeAppResume?.();
+      unsubscribeNavigate?.();
+    };
   };
 }

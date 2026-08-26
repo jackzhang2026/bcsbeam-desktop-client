@@ -2,6 +2,7 @@ export default {
   system: {
     showWindow: "显示",
     hideWindow: "隐藏",
+    remoteSupport: "获取远程支持",
     hide: "隐藏",
     about: "关于",
     quit: "退出",

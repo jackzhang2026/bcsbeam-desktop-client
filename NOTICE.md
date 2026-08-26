@@ -385,6 +385,38 @@ original Phase 2 scope) hasn't started; "My Devices" was the natural
 first slice since it needed no new client-side plumbing beyond what
 Tickets already proved out.
 
+## Remote-support tray entry (2026-08-26)
+
+The other half of Phase 2's opening scope: a "Get Remote Support" item in
+the system tray menu (`electron/main/trayManage.ts`), between Show/Hide
+Window and the dev-tools/quit items. Deliberately does **not** reimplement
+device selection or the intake call itself — per the handoff doc's own
+framing (§3.5: "the client is a nicer front door onto an existing intake
+queue, not a new remote-control implementation"), it just shows the main
+window and navigates it to `/devices` (My Devices, shipped in the previous
+commit), whose own per-device "Request Support" button does the real work.
+
+**Why a tray click can't just call `navigate()` directly:** the tray menu
+lives in Electron's main process; react-router's `navigate()` only exists
+inside the renderer. Added a small one-way channel for this:
+`IpcMainToRender.navigateTo` (new, alongside the existing `appResume`) is
+sent via the same `sendEvent()` main-process helper `appResume` already
+uses, and picked up by a new subscription inside
+`src/layout/useGlobalEvents.tsx`'s existing `setIpcListener()` (the same
+place `appResume` is handled) that calls `navigate(path)` with whatever
+path string it receives. No new IPC plumbing pattern — reused what was
+already there for `appResume`.
+
+**Not done here, deliberately:** a one-click "request support for the
+computer I'm on right now" (no device picker) would need this app to know
+its own machine's MeshCentral node id — plausible if the same box also has
+the Mesh/RustDesk agents from the branded installer, but resolving that
+locally (reading whatever the installer drops, or matching by hostname)
+wasn't investigated for this pass. Going through My Devices' own list is
+a real, complete, low-risk path today; a smarter one-click default is a
+scoped follow-up once that installer-side lookup is actually confirmed,
+not guessed at.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,
