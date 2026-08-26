@@ -11,6 +11,13 @@ export interface IElectronAPI {
    * auto-detect "this computer" in the Devices page's device list, without
    * a server-side round trip. See electron/preload/index.ts. */
   getHostname: () => string;
+  /** This machine's own RustDesk connection id, via `rustdesk.exe --get-id`
+   * — an exact-match alternative to getHostname() above for the same
+   * "this computer" auto-detect. Resolves to "" (never rejects) if RustDesk
+   * isn't installed, isn't Windows, or the query fails for any reason —
+   * always safe to fall back to getHostname() on an empty result. See
+   * electron/preload/index.ts for why no MeshCentral equivalent exists. */
+  getRustdeskId: () => Promise<string>;
   subscribe: (channel: string, callback: (...args: unknown[]) => void) => () => void;
   subscribeOnce: (channel: string, callback: (...args: unknown[]) => void) => void;
   unsubscribeAll: (channel: string) => void;

@@ -1,3 +1,4 @@
+import { execFile } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -124,12 +125,60 @@ const openExternal = (url: string) => ipcRenderer.invoke("openExternal", url);
 // preload script always has full Node access regardless of contextIsolation).
 const getHostname = () => os.hostname();
 
+// Phase 2 follow-up (2026-08-27): a real, exact-match alternative to
+// getHostname() above — this device's own RustDesk connection id, read the
+// same way the backend already does it server-side (it_audit/services/
+// rustdesk_probe.py's PowerShell payload: try the standard per-machine
+// install path first, then fall back to PATH). Unlike a MeshCentral node
+// id — confirmed, after actually looking, to have no locally-readable
+// equivalent anywhere this project's installer leaves a trace of — RustDesk
+// genuinely documents `--get-id` as a real CLI query, and this project's own
+// vendored fork implements it (beam-remote-client/src/core_main.rs).
+// Resolves to "" (never rejects) on any failure — not installed, not
+// Windows, binary hung, id line didn't look like a RustDesk id — so a
+// caller can always fall back to getHostname() unconditionally.
+const RUSTDESK_ID_TIMEOUT_MS = 3000;
+const RUSTDESK_EXE_CANDIDATES = [
+  "C:\\Program Files\\RustDesk\\rustdesk.exe",
+  "C:\\Program Files (x86)\\RustDesk\\rustdesk.exe",
+];
+const RUSTDESK_ID_PATTERN = /^\d+$/;
+
+const getRustdeskId = (): Promise<string> => {
+  if (process.platform !== "win32") return Promise.resolve("");
+
+  const tryExe = (exe: string): Promise<string> =>
+    new Promise((resolve) => {
+      execFile(exe, ["--get-id"], { timeout: RUSTDESK_ID_TIMEOUT_MS }, (error, stdout) => {
+        if (error) {
+          resolve("");
+          return;
+        }
+        // Mirrors the PowerShell probe's `Select-Object -Last 1` — --get-id
+        // can print status/log lines before the id on some builds.
+        const lines = stdout.trim().split(/\r?\n/);
+        const id = (lines[lines.length - 1] || "").trim();
+        resolve(RUSTDESK_ID_PATTERN.test(id) ? id : "");
+      });
+    });
+
+  return (async () => {
+    for (const exe of RUSTDESK_EXE_CANDIDATES) {
+      if (!fs.existsSync(exe)) continue;
+      const id = await tryExe(exe);
+      if (id) return id;
+    }
+    return "";
+  })();
+};
+
 const Api: IElectronAPI = {
   getDataPath,
   getVersion: () => process.version,
   getPlatform,
   getSystemVersion: process.getSystemVersion,
   getHostname,
+  getRustdeskId,
   subscribe,
   subscribeOnce,
   unsubscribeAll,

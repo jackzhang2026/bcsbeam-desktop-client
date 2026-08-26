@@ -8,14 +8,19 @@
 // (it_audit/portal_customer_views.py). See PortalWebView for why this
 // needs no separate auth step.
 //
-// "help me right now" one-click (2026-08-26): the desktop shell is the only
-// party that can cheaply answer "which machine is this?" — it appends its
-// own OS hostname (getHostname(), Node's os.hostname(), exposed by
-// electron/preload) as a `localHost` query param on the portal URL. The
-// portal page itself decides what to do with it (best-effort match against
-// the customer's device list, offer a one-click request-support action if
-// exactly one device matches) — this component owns nothing about that
-// matching, only about telling the guest page what machine it's running on.
+// "help me right now" one-click (2026-08-26, upgraded 2026-08-27): the
+// desktop shell is the only party that can cheaply answer "which machine is
+// this?" — it appends its own OS hostname (getHostname()) AND, when
+// available, this machine's own RustDesk connection id (getRustdeskId(),
+// an exact match — see electron/preload/index.ts for why there's no
+// MeshCentral equivalent) as query params on the portal URL. The portal
+// page itself decides what to do with them (prefers the RustDesk id match
+// when present, falls back to the hostname guess otherwise) — this
+// component owns nothing about that matching, only about telling the guest
+// page what machine it's running on.
+import { Spin } from "antd";
+import { useEffect, useState } from "react";
+
 import { PortalWebView } from "@/components/PortalWebView";
 
 const DEFAULT_PORTAL_DEVICES_URL =
@@ -23,11 +28,43 @@ const DEFAULT_PORTAL_DEVICES_URL =
 const PORTAL_DEVICES_URL =
   import.meta.env.VITE_PORTAL_DEVICES_URL || DEFAULT_PORTAL_DEVICES_URL;
 
-const buildDevicesUrl = () => {
-  const hostname = window.electronAPI?.getHostname?.() || "";
-  if (!hostname) return PORTAL_DEVICES_URL;
+const buildDevicesUrl = (hostname: string, rustdeskId: string) => {
+  const params = new URLSearchParams();
+  if (hostname) params.set("localHost", hostname);
+  if (rustdeskId) params.set("localRustdeskId", rustdeskId);
+  const query = params.toString();
+  if (!query) return PORTAL_DEVICES_URL;
   const separator = PORTAL_DEVICES_URL.includes("?") ? "&" : "?";
-  return `${PORTAL_DEVICES_URL}${separator}localHost=${encodeURIComponent(hostname)}`;
+  return `${PORTAL_DEVICES_URL}${separator}${query}`;
 };
 
-export const Devices = () => <PortalWebView url={buildDevicesUrl()} />;
+export const Devices = () => {
+  // Held until both local-identity lookups resolve (getRustdeskId() is
+  // async — it shells out to a subprocess) so the webview's very first
+  // navigation already carries whichever params are available, rather than
+  // loading once, then reloading a moment later when the RustDesk id shows
+  // up. getHostname() is synchronous so this only ever waits on the latter.
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const hostname = window.electronAPI?.getHostname?.() || "";
+    Promise.resolve(window.electronAPI?.getRustdeskId?.() ?? "")
+      .catch(() => "")
+      .then((rustdeskId) => {
+        if (!cancelled) setUrl(buildDevicesUrl(hostname, rustdeskId));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!url) {
+    return (
+      <div className="flex h-full flex-1 items-center justify-center bg-white">
+        <Spin />
+      </div>
+    );
+  }
+  return <PortalWebView url={url} />;
+};
