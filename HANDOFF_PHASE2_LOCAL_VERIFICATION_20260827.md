@@ -297,6 +297,81 @@ handoff is disposable once its job is done.
 
 ---
 
+## Verification status (2026-08-27)
+
+**Environment:** Jack's own dev machine (`DESKTOP-IBRVK3V`), same one Phase 1
+was verified on — `ELECTRON_RUN_AS_NODE` unset, real GUI available. Pulled
+`bcsbeam-desktop-client` from GitHub (already current per the push-policy
+correction above), rebuilt (`pnpm run typecheck` + `pnpm run build`, both
+clean), verified via a Playwright-Electron harness driving the real built
+app (same technique as Phase 1's Stage A/B), not a human clicking through —
+noted per-step below where that matters.
+
+**Stage A — pass, with one honestly-scoped gap:**
+
+1. App launches, login screen present (Phase 1 mechanism unchanged) — pass.
+2. **Pre-existing side effect found, not a bug**: the Phase 2 rebrand
+   renamed `localForage`'s db (`src/utils/storage.ts`) from
+   `"OpenCorp-Config"` to `"BCSBeam-Config"`. That's the _correct_ fix (the
+   old name was upstream-demo leftover) but it orphans any session stored
+   under the old name — yesterday's real Stage B login (Phase 1) no longer
+   auto-restores. Expected, not something to revert.
+3. To test the Phase 2 UI mechanics without a real login (same
+   no-real-credentials class of technique as Phase 1 Stage A's mock
+   server): injected a placeholder string into `IM_TOKEN`/`IM_USERID` via
+   IndexedDB directly. `MainContentWrap`'s route guard only checks
+   presence, not validity, so this gets past it — but the placeholder then
+   fails real `IMSDK.login()` (`errCode 1503 TokenMalformedError`), which
+   triggers the **same pre-existing bounce-back-to-`/login` behavior
+   already documented** in `HANDOFF_ELECTRON_LOGIN_VERIFICATION_20260826.md`
+   (an unrelated, already-known effect of a failed real login — not
+   something Phase 2 introduced). This made the verification window a few
+   seconds wide per app launch; results below were captured within that
+   window. Test artifact (the placeholder token) has been deleted from the
+   profile afterward — a real login will start clean.
+4. **"My Devices" left-nav entry**: visible — pass.
+5. **Devices route + `<webview>` src** (the one thing "IMPOSSIBLE to fake
+   or infer from a sandbox" per this handoff): confirmed exactly
+   `https://customer.centoffer.com/customer-portal/devices?localHost=DESKTOP-IBRVK3V`
+   — real `os.hostname()` value genuinely appended. Confirmed **repeatedly,
+   reproducibly**, both via a direct route change and via the equivalent of
+   the left-nav click — pass every time.
+6. **Tray "Get Remote Support" item**: the native OS system-tray context
+   menu itself isn't part of any `BrowserWindow`'s DOM, so
+   Chromium/Playwright automation has no way to physically click it (a hard
+   tooling limit, not worth working around by guessing pixel coordinates on
+   a real screen) — that one visual/click confirmation (does the label +
+   separator actually render, does a real click register) still needs a
+   human's 30-second glance and hasn't happened. Everything downstream of
+   the click **has** been verified: `electron/main/trayManage.ts`'s handler
+   is exactly `showWindow(); sendEvent(IpcMainToRender.navigateTo,
+"/devices")` (source review), and invoking that exact `sendEvent` call
+   directly from the main process (the real compiled function) produced a
+   genuine, observed navigation to `/devices` in the renderer — confirming
+   the IPC round-trip works, not just that the code reads correctly.
+7. **(Landed mid-verification, re-tested against it)** A later commit
+   (`2af0367`) upgraded local-device detection from hostname-only to
+   preferring an exact RustDesk connection id (`getRustdeskId()`, shells out
+   to `rustdesk.exe --get-id`), falling back to hostname when RustDesk isn't
+   found. This dev machine has no RustDesk install, which is exactly the
+   fallback path — re-ran the same webview-src check against the rebuilt
+   app and got `?localHost=DESKTOP-IBRVK3V` with no `localRustdeskId`
+   param, confirming the graceful-fallback path (the positive
+   RustDesk-present path is unverified here — would need a machine with
+   RustDesk actually installed).
+
+**No bugs found or fixed in this stage** — Phase 2's client-side mechanics
+work as designed.
+
+**Stage B and Stage C: not attempted.** Both require Jack's fresh, explicit
+approval per this handoff's own §3.2/§3.3 (an earlier approval doesn't
+carry over, and none has been given for this session) — that approval is
+being asked for separately rather than assumed. `backend/docs/
+BCS_BEAM_OPEN_ISSUES_REGISTER.md` #5 has not been touched by this session
+yet; will update once Stage B/C status is known.
+
+---
+
 _This handoff assumes you have already read
 `HANDOFF_ELECTRON_LOGIN_VERIFICATION_20260826.md` for the sandbox-limitation
 background and Stage A/B naming convention it established — this file
