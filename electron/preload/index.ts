@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { DataPath, IElectronAPI } from "./../../src/types/globalExpose.d";
 import { contextBridge, ipcRenderer } from "electron";
@@ -114,11 +115,21 @@ const saveFileToDisk = async ({
 const portalLogin = () => ipcRenderer.invoke("portalLogin");
 const openExternal = (url: string) => ipcRenderer.invoke("openExternal", url);
 
+// Phase 2 (TASK-062): lets the Devices page (src/pages/devices) tell the
+// customer portal's My Devices list which of the customer's devices IS the
+// machine the click came from, so it can offer a true one-click "request
+// support for this computer" instead of always making the user pick from a
+// list — see src/pages/devices/index.tsx. Same style as getSystemVersion
+// (a direct, synchronous Node call, not an ipcRenderer round trip — the
+// preload script always has full Node access regardless of contextIsolation).
+const getHostname = () => os.hostname();
+
 const Api: IElectronAPI = {
   getDataPath,
   getVersion: () => process.version,
   getPlatform,
   getSystemVersion: process.getSystemVersion,
+  getHostname,
   subscribe,
   subscribeOnce,
   unsubscribeAll,

@@ -7,6 +7,10 @@ export interface IElectronAPI {
   getVersion: () => string;
   getPlatform: () => Platform;
   getSystemVersion: () => string;
+  /** The local machine's OS hostname (Node's os.hostname()) — used to
+   * auto-detect "this computer" in the Devices page's device list, without
+   * a server-side round trip. See electron/preload/index.ts. */
+  getHostname: () => string;
   subscribe: (channel: string, callback: (...args: unknown[]) => void) => () => void;
   subscribeOnce: (channel: string, callback: (...args: unknown[]) => void) => void;
   unsubscribeAll: (channel: string) => void;

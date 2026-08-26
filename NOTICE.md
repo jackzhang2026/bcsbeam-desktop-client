@@ -417,6 +417,27 @@ a real, complete, low-risk path today; a smarter one-click default is a
 scoped follow-up once that installer-side lookup is actually confirmed,
 not guessed at.
 
+## Local-device auto-detect on My Devices (2026-08-26, follow-up to the above)
+
+Went with the hostname-matching option instead of the (unconfirmed, not
+investigated) MeshCentral node-id lookup: `electron/preload/index.ts` now
+exposes `getHostname()` (`os.hostname()`, same pattern as the existing
+`getSystemVersion`, no IPC round trip needed — a preload script always has
+Node access regardless of `contextIsolation`). `src/pages/devices/index.tsx`
+appends it as a `localHost` query param on the portal URL before handing it
+to `PortalWebView`. The matching itself lives entirely on the portal side —
+this component's only job is telling the guest page what machine it's
+running on (see `frontend/src/pages/CustomerPortal/MyDevices.tsx` in the
+main FINOS repo for the match + one-click "Request Support" banner it
+renders when exactly one device matches).
+
+**Known limitation, accepted rather than solved:** hostname matching is a
+heuristic, not an identity proof — a renamed machine, a hostname collision,
+or `display_name` recorded from a different source than the OS's own idea
+of its hostname can all miss or (in a collision) deliberately decline to
+guess. The normal device list is always still there underneath as the
+fallback; this only adds a shortcut for the common case where it works.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,
