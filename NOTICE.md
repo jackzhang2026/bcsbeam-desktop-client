@@ -294,6 +294,67 @@ string }` was enough for what this page actually needs. Tray shell polish
 change and still open — see the icon-assets section above for what's
 already been assessed there.
 
+## Login screen + splash + About branding (2026-08-26, completes Phase 1 §6 chrome)
+
+The icon-assets pass earlier didn't touch anything actually rendered inside
+the app's own UI — the splash screen, login screen illustration, and About
+dialog logo were all still 100% upstream OpenIM demo content. Found while
+doing this: `public/splash.html` (shown on every launch, before the main
+window even renders) literally spelled out **"OpenIM"** letter-by-letter
+with a fade animation — the single most visible unbranded surface in the
+whole app, missed by the earlier icon pass because it's a standalone static
+HTML file, not part of the Vite/React bundle those changes touched.
+
+Fixed, same "reuse the approved v1.3 system, don't invent new art" rule as
+the icon pass:
+
+- `public/splash.html`: replaced the "OpenIM" letter animation with the
+  approved `icons/icon.png` mark (pulsing) + "BCS Beam" text, both already
+  referenced by the packaged app so no build-config changes needed to make
+  a static file see them at runtime.
+- `src/pages/login/index.tsx`'s `LeftBar`: was a generic English-only
+  unDraw-style stock illustration (`login_bg.png`, two people at a
+  whiteboard — visibly not BCS Beam's product) under `t("placeholder.title/
+subTitle")` copy that literally said "Online office collaboration" /
+  "Collaborative work for efficient office tasks" (OpenIM demo's own
+  generic pitch, not ours). Replaced with a navy-panel brand treatment
+  (`linear-gradient(160deg, #16407a → #0a2049 → #04101f)`, sampled directly
+  from `beam-remote-client/branding/installer-art/WixUIDialogBmp.bmp`'s
+  actual pixel values rather than guessed, so it's the same navy as the
+  RustDesk-fork installer, not a close-enough approximation) showing the
+  `icon.png` mark + the approved `branding/wordmark/logo-dark-mode.png`
+  wordmark (light-on-dark variant — "light-mode"/"dark-mode" in that
+  filename means "for use on a light/dark background", not a UI theme
+  toggle) + new copy: "All your support, in one place." / "Chat, tickets,
+  and remote help — together." (`zh`: "所有支持，一个入口。"/"聊天、工单、
+  远程协助，一站直达。") replacing the generic OpenIM pitch. New shared
+  assets under `src/assets/images/brand/` (`bcs-beam-mark.png`,
+  `bcs-beam-wordmark-on-dark.png` — both copies of already-approved fork
+  art, not regenerated).
+- `src/layout/LeftNavBar/About.tsx`'s logo (OpenIM's own chat-bubble-bird
+  mark, shown at 56px in the About dialog): swapped in place for the same
+  `icon.png` "B" mark (`src/assets/images/profile/logo.png` overwritten
+  with identical content to `public/icons/icon.png` — same file path kept,
+  so no code change needed in `About.tsx` itself).
+- Deleted now-fully-orphaned assets confirmed unreferenced anywhere in the
+  repo before removal (not assumed dead): `login_bg.png`, `login_qr.png`,
+  `login_pc.png` (leftover from the deleted QR/phone login flow), and the
+  i18n keys that only existed to feed them (`placeholder.qrCodeLogin`,
+  `qrCodeLoginTitle`, `welcome` — `title`/`subTitle` were kept and
+  repurposed for the new copy above, in both `en` and `zh`, kept in sync).
+- Caught one real bug before shipping, not just eyeballing the code: a
+  global `html div { color: var(--base-black) }` rule (`src/styles/
+global.scss`) applies navy text color directly to every unstyled `<div>`,
+  which made the new tagline's first line render as near-invisible navy-on-
+  navy until an explicit `text-white` class was added — the second line
+  happened to already have its own color utility (`text-white/60`) so it
+  wasn't affected, and to visually confirm this rather than just re-reading
+  the diff, this was checked with a real Chromium (`@playwright/test`,
+  chromium binary installed in this sandbox — a headless browser, unrelated
+  to and unaffected by the `ELECTRON_RUN_AS_NODE` guardrail that blocks
+  real Electron/BrowserWindow here) screenshotting the built `dist/`
+  through `vite preview`, in both `en` and `zh`.
+
 ## Licensing boundary (CLAUDE.md §6j precedent, applies here too)
 
 This repo embeds `@openim/electron-client-sdk` and `@openim/wasm-client-sdk`,

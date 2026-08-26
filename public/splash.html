@@ -4,67 +4,55 @@
     <style>
       body {
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         height: 100vh;
         margin: 0;
         padding: 0;
-        font-family: Arial, sans-serif;
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Arial,
+          sans-serif;
         cursor: default;
+        background: transparent;
       }
 
-      .logo {
-        font-size: 32px;
-        font-weight: bold;
-        text-transform: uppercase;
+      .mark {
+        width: 88px;
+        height: 88px;
+        border-radius: 20px;
+        animation: pulse 1.6s ease-in-out infinite;
       }
 
-      .letter {
-        opacity: 0;
-        color: lightgreen;
+      .name {
+        margin-top: 14px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #262626;
+        letter-spacing: 0.2px;
       }
 
-      .fade-in-animation {
-        animation: fade-in 4s infinite;
-      }
-
-      @keyframes fade-in {
+      @keyframes pulse {
         0% {
-          opacity: 0;
-          color: lightgreen;
+          opacity: 0.55;
+          transform: scale(0.96);
         }
         50% {
           opacity: 1;
-          color: lightblue;
+          transform: scale(1);
         }
         100% {
-          opacity: 0;
+          opacity: 0.55;
+          transform: scale(0.96);
         }
       }
     </style>
   </head>
   <body>
-    <div class="logo">
-      <span class="letter">O</span>
-      <span class="letter">p</span>
-      <span class="letter">e</span>
-      <span class="letter">n</span>
-      <span class="letter">I</span>
-      <span class="letter">M</span>
-    </div>
-
-    <script>
-      const letters = document.querySelectorAll(".letter");
-
-      function animateLetters() {
-        letters.forEach((letter, index) => {
-          setTimeout(() => {
-            letter.classList.add("fade-in-animation");
-          }, index * 300);
-        });
-      }
-
-      animateLetters();
-    </script>
+    <img class="mark" src="./icons/icon.png" alt="" />
+    <div class="name">BCS Beam</div>
   </body>
 </html>
