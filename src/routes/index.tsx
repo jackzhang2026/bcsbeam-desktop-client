@@ -57,6 +57,13 @@ const router = createHashRouter([
               return { Component: Devices };
             },
           },
+          {
+            path: "security",
+            async lazy() {
+              const { Security } = await import("@/pages/security");
+              return { Component: Security };
+            },
+          },
         ],
       },
       {
