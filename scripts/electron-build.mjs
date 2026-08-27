@@ -30,12 +30,27 @@ const dryRun = rawArgs.includes("--dry-run");
 const buildAll = rawArgs.includes("--all");
 const forwardedArgs = rawArgs.filter((arg) => arg !== "--dry-run" && arg !== "--all");
 
+// shell:true (below) makes spawnSync join command+args into one string for
+// cmd.exe to parse — electronBuilderCommand is an absolute path under this
+// repo, which lives under "BCS Beam Desktop Client" (spaces in the folder
+// name), so the command token needs its own quotes or cmd.exe splits it at
+// the first space. Args here never contain spaces, but quoting defensively
+// costs nothing.
+const quoteForShell = (value) => (/\s/.test(value) ? `"${value}"` : value);
+
 const run = (command, args) => {
   console.log(`> ${path.basename(command)} ${args.join(" ")}`);
-  const result = spawnSync(command, args, {
+  const result = spawnSync(quoteForShell(command), args.map(quoteForShell), {
     cwd: repoRoot,
     env: process.env,
     stdio: "inherit",
+    // Both commands this helper ever runs (pnpmCommand, electronBuilderCommand)
+    // resolve to a .cmd file on win32. Since Node's CVE-2024-27980 fix, spawning
+    // a .bat/.cmd directly with shell left at its default (false) throws EINVAL
+    // instead of the old (unsafe) implicit cmd.exe handoff — it now requires an
+    // explicit opt-in. `command`/`args` here are always our own fixed, hardcoded
+    // values (never user input), so shell interpretation carries no injection risk.
+    shell: process.platform === "win32",
   });
   if (result.status !== 0) {
     throw new Error(`${path.basename(command)} exited with code ${result.status ?? 1}`);
