@@ -13,7 +13,16 @@ const rootPackage = JSON.parse(
 const explicitExecutable = process.argv.slice(2).find((arg) => arg !== "--");
 
 const getDefaultExecutable = () => {
-  const releaseRoot = path.join(repoRoot, "release", "Base", rootPackage.version);
+  // Must match electron-builder.json5's `directories.output` ("release/BcsBeam/${version}").
+  // This was still "Base" — the pristine OpenIM electron demo's product name
+  // before the "fork scaffold — rebrand OpenIM electron demo as BCS Beam
+  // desktop client" commit — left stale since that rebrand, so every local
+  // (and presumably CI) run of `pnpm electron:smoke` has been throwing
+  // "Packaged Electron executable is missing" rather than actually
+  // smoke-testing anything. Found 2026-08-28 while verifying this session's
+  // changes build and pass CI's own steps before considering a client
+  // release.
+  const releaseRoot = path.join(repoRoot, "release", "BcsBeam", rootPackage.version);
   if (process.platform === "darwin") {
     return path.join(
       releaseRoot,
