@@ -5,6 +5,7 @@ import { createTray } from "./trayManage";
 import { setIpcMainListener } from "./ipcHandlerManage";
 import { setAppGlobalData, setAppListener, setSingleInstance } from "./appManage";
 import createAppMenu from "./menuManage";
+import { handleProtocolArgv, registerOAuthProtocol } from "./oauthProtocol";
 import { isLinux } from "../utils";
 import { getLogger } from "../utils/log";
 import { initI18n } from "../i18n";
@@ -23,8 +24,16 @@ const init = () => {
 
 setAppGlobalData();
 setIpcMainListener();
+// As early as possible (before whenReady) — see oauthProtocol.ts's own
+// comment on why registration timing matters for catching a launch URL.
+registerOAuthProtocol();
 setSingleInstance();
 setAppListener(init);
+// Windows/Linux: if a bcsbeam:// link launched this process fresh (app
+// wasn't already running — the second-instance path in appManage.ts covers
+// the far more common "app already open" case), the URL is in THIS
+// process's own argv rather than an event.
+handleProtocolArgv(process.argv);
 
 app.whenReady().then(() => {
   isLinux ? setTimeout(init, 300) : init();

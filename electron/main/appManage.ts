@@ -5,6 +5,7 @@ import fs from "fs";
 import { isMac, isProd, isWin } from "../utils";
 import { getStore } from "./storeManage";
 import { IpcMainToRender } from "../constants";
+import { handleProtocolArgv } from "./oauthProtocol";
 import { logger } from ".";
 
 const store = getStore();
@@ -15,7 +16,13 @@ export const setSingleInstance = () => {
     process.exit(0);
   }
 
-  app.on("second-instance", () => {
+  // Windows/Linux OAuth handoff (see oauthProtocol.ts): a bcsbeam:// link
+  // clicked while the app is already running launches a second instance
+  // whose only job is to hand its argv to this one and exit — this is that
+  // handoff. A second-instance launch with no such link is the pre-existing
+  // "user double-clicked the app again" case, unaffected.
+  app.on("second-instance", (_event, argv) => {
+    handleProtocolArgv(argv);
     showWindow();
   });
 };
