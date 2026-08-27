@@ -216,68 +216,67 @@ via the Electron client) and confirm:
   appears (per-row and in the "this looks like your computer" banner if it
   matched) — **do not click it yet**, that's Stage C.
 
-### 3.3 Stage C — chat (needs MORE than a deploy — a real infra gap, verified not assumed)
+### 3.3 Stage C — chat
 
-**Read this before attempting Stage C — it is not "just also deploy
-this."** Two things were checked directly (not assumed) while writing this
-handoff, on this box, right now:
+**⚠️ Correction (2026-08-27, later same day than this handoff's first
+version):** the original version of this section claimed the real backend
+couldn't reach OpenIM at all. That was wrong — it tested `finance_celery`,
+not the container that actually runs this code. `request_support`/
+`ensure_support_group`/Token Broker all run synchronously inside a web
+request (no Celery task touches `openim_bridge` — confirmed by a full
+repo grep), which means the container that matters is `finance_backend_blue`
+(whichever color is currently live — check `.bluegreen_state`). Re-tested
+directly against it: joined to `openim-test_openim`, `getent hosts
+openim-server` resolves, and a real `POST /auth/get_admin_token` call
+returned a valid token end-to-end. **Backend-to-OpenIM connectivity is
+fine.** Only the earlier "no nginx/DNS for `support-chat-web`" part was
+correct — that one's real, see below.
 
-1. `OPENIM_ENABLED=true` **is** already set in this box's `.env`, and the
-   currently-running `finance_celery`/`finance_backend` containers already
-   read it as `True`.
-2. **But** `OPENIM_API_URL=http://openim-server:10002` does **not**
-   resolve from those containers — `openim-server` only exists as a
-   network alias on the `openim-test_openim` Docker network (the TASK-059
-   trial OpenIM stack, `/home/ecs-user/openim-test/`), which the real
-   `finance_backend`/`finance_celery` containers are **not** joined to.
-   Confirmed with a live DNS lookup from inside `finance_celery` — it
-   fails. This means **every OpenIM call the real backend makes today
-   silently fails** (caught by the various best-effort `try/except`
-   blocks throughout this feature — nothing crashes, but nothing reaches
-   OpenIM either).
-3. On top of that, `support-chat-web` has **no nginx/DNS wiring anywhere in
-   this environment** — there is no URL to point `VITE_SUPPORT_CHAT_URL`
-   at, and the OpenIM API/WS ports are internal-Docker-network-only, not
-   exposed to the internet at all — so even a machine outside this box
-   (like yours) could not reach them regardless of DNS.
+**What's still true — `support-chat-web` isn't reachable from your
+machine.** The OpenIM API/WS ports on this box are bound to
+`127.0.0.1` only (`docker port openim_test_server` → both `10001`/`10002`
+map to `127.0.0.1:<port>`), and `support-chat-web` has no nginx/DNS
+anywhere in this environment. That means a real machine OUTSIDE this box
+(yours) genuinely cannot reach either one directly — no amount of local
+setup on your end routes around that.
 
-**None of this is something Stage C can route around by trying harder.**
-Getting real end-to-end chat working needs actual infrastructure work
-(join the two Docker networks or repoint `OPENIM_API_URL` at something
-reachable; stand up nginx + DNS for `support-chat-web`; expose the OpenIM
-API/WS ports appropriately) that is **out of scope for a "verify Phase 2"
-pass** — it's its own task, and should be scoped and approved separately,
-not squeezed in here.
+**What you CAN do about it, without any new infra work:** if you have SSH
+access to this box (§1's access method), tunnel both ports and run
+`support-chat-web`'s dev server pointed at the tunnel — this gives you a
+REAL end-to-end test (real backend-minted credentials, real OpenIM login,
+real message send/receive), not just handshake mechanics:
 
-**What you CAN still usefully verify without any of that** — the
-`postMessage` handshake mechanics themselves, which are 100% new code and
-have never run in a real browser:
+1. `ssh -L 10001:127.0.0.1:10001 -L 10002:127.0.0.1:10002 <ssh-alias-for-this-box>`
+   (keep this SSH session open in a terminal for the duration of the test).
+2. On your machine: `cd support-chat-web && npm install`, then set
+   `VITE_OPENIM_API=http://localhost:10002` and
+   `VITE_OPENIM_WS=ws://localhost:10001` (env vars read by `src/App.tsx`),
+   `npm run dev`.
+3. You still need real, currently-valid OpenIM credentials for a real
+   `customer_portal_openim_user_id` and a real `support_<id>` group your
+   test account is a member of — the cleanest way to get both is completing
+   Stage B first (a real `request_support` call against the deployed
+   backend returns `openim_group_id`; minting credentials is
+   `POST /api/openim/token/` with that same portal session's bearer token).
+4. Build a small local HTML file (throwaway, don't commit it) that iframes
+   `http://localhost:5173/?mode=portal&group=<the real group id>` and, once
+   it receives `{source:'bcs-beam-chat', type:'ready'}`, replies with the
+   REAL credentials from step 3 as `{source:'bcs-beam-host',
+type:'openim-credentials', openimUserID, token, expireTimeSeconds}`.
+5. If everything above is real, this should actually connect and let you
+   send/receive a real message — not just reach `sdk.login()` with fake
+   values. If you can't complete Stage B yet (no deploy approval), fall
+   back to fake credentials as the previous version of this section
+   described — that still verifies the handshake mechanics (readiness
+   announcement, origin-check, credential threading into `connect()`)
+   even without a real login succeeding.
 
-1. Run `support-chat-web`'s own dev server locally: `cd support-chat-web
-&& npm install && npm run dev` (this alone does not need the FINOS
-   backend at all).
-2. Open it directly at `http://localhost:5173/?mode=portal&group=test`
-   (or whatever port Vite picks). Expect it to sit on the "connecting"
-   spinner forever and eventually show `connectFailed` — it's waiting for
-   a `postMessage` from a parent frame it doesn't have, since you opened it
-   directly rather than through an iframe. That's expected, not a bug.
-3. Build a **tiny local HTML file** (throwaway, don't commit it) that
-   iframes that same dev-server URL and, in a script tag, listens for the
-   `{source:'bcs-beam-chat', type:'ready'}` message and replies with a
-   FAKE credentials message: `{source:'bcs-beam-host',
-type:'openim-credentials', openimUserID:'test', token:'fake',
-expireTimeSeconds:3600}`. Confirm `support-chat-web` receives it (add a
-   temporary `console.log` in `src/portalBridge.ts` if needed, remove
-   before committing) and moves off the "boot" phase into actually calling
-   `sdk.login()` with those fake values (which will then fail against the
-   real OpenIM SDK, since the credentials are fake — that failure is fine
-   and expected; you're verifying the HANDSHAKE reached that point, not
-   that fake credentials produce a real login).
-4. This confirms: `portalBridge.ts`'s readiness announcement fires, the
-   origin-check logic doesn't accidentally reject a legitimate parent, and
-   the credentials get threaded into `connect()` correctly. It does NOT
-   confirm a real message can be sent/received over real OpenIM — that
-   needs the infra work above, separately scoped.
+**Still out of scope for this pass, unchanged:** making `support-chat-web`
+reachable from the public internet (real nginx + DNS + exposing the OpenIM
+ports appropriately) — that's real production infrastructure work, not
+something to squeeze into a verification pass. The SSH-tunnel approach
+above is a legitimate way to fully verify the FEATURE works without
+needing that infrastructure to exist yet.
 
 **Report Stage C as "handshake mechanics verified, full E2E blocked on
 [infra gap above]"** — do not report it as "chat works."
