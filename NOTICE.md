@@ -451,8 +451,67 @@ Same push discipline as those two repos: commit locally during development,
 push to the public GitHub remote only at actual deploy time (tag = deploy
 version) — per Jack's explicit repo approval, 2026-08-26 (see the register).
 
+## First real Windows build + packaging fixes (2026-08-28, per `HANDOFF_WINDOWS_BUILD_20260828.md`)
+
+Nobody had ever produced a Windows package for this repo before this session
+(CI only builds Linux — see that handoff for the full brief). Running
+`pnpm build:win` for the first time on real Windows hardware surfaced three
+genuine, previously-undiscovered build-tooling bugs — none in application
+code, all in `scripts/electron-build.mjs`, `scripts/electron-smoke.mjs`, and
+`.npmrc` (this updates the "Not changed" line below re: build tooling):
+
+1. **`electron-build.mjs`'s `run()` helper couldn't spawn `.cmd` files on
+   Windows at all** (`f700d77`) — `pnpm.cmd` and `electron-builder.cmd` both
+   hit Node's CVE-2024-27980 hardening: spawning a `.bat`/`.cmd` directly
+   without `shell:true` now throws `EINVAL` instead of the old (unsafe)
+   implicit cmd.exe handoff Node used to do silently. This means
+   `pnpm build:win` — the only way to produce a Windows package — had
+   apparently never completed on this repo before, on any machine. Fixed by
+   passing `shell: process.platform === "win32"`, with defensive quoting
+   since this repo's own path (`...\BCS Beam Desktop Client\...`) contains
+   spaces that break unquoted shell parsing.
+2. **`koffi`'s native binary (`koffi.node`) never reached the packaged
+   app** (`aff117a`) — `@openim/electron-client-sdk`'s real IM SDK core
+   needs it as its FFI bridge, and `electron-builder.json5` already had a
+   correct-looking `extraResources` entry for it
+   (`node_modules/koffi/build/koffi/win32_${arch}/`), but pnpm's default
+   "isolated" linker never creates that top-level path for a _transitive_
+   dependency (koffi isn't in this package's own `package.json` — only
+   `@openim/electron-client-sdk`'s), so electron-builder silently copied
+   nothing and logged an easy-to-miss warning instead of failing the build.
+3. **`@babel/runtime` (needed by `i18next`) crashed the packaged app on
+   first launch** — `Cannot find module '@babel/runtime/helpers/typeof'`,
+   a native "A JavaScript error occurred in the main process" dialog before
+   any window content loads. Identical root cause to #2, different package.
+
+Fixed #2 and #3 together (`aff117a`) by setting `node-linker=hoisted` in
+`.npmrc` — the standard documented remedy for pnpm + electron-builder
+specifically: every package, transitive or not, gets a real top-level
+`node_modules/<name>` entry, same as npm/yarn would produce, rather than
+patching one newly-discovered missing package at a time.
+
+Also fixed (`423c1c8`): `electron-smoke.mjs`'s win32 branch (already touched
+once for the `release/Base` → `release/BcsBeam` path, by whichever session
+ran before this one on 2026-08-28) was still looking for
+`bcsbeam-desktop-client.exe` — electron-builder actually names the
+win-unpacked executable after `productName` ("BCS Beam.exe"). Left the mac
+branch's identical-looking pattern alone — same bug is plausible there too
+(.app bundles are also named after `productName`) but unverified without
+mac hardware.
+
+All three fixes verified together on real Windows hardware: clean
+`pnpm build:win`, `pnpm electron:smoke` passes
+("`OPENIM_ELECTRON_READY`" / "Packaged Electron startup smoke test
+passed"), and the login gate screen renders and animates correctly
+(beam-of-light motif, tightened "Sign in" copy). Post-login checklist items
+(§7 of the handoff) intentionally not run by me — need a real portal
+sign-in, which per this project's own hard rule on credentials I don't do
+myself; Jack is running that part himself.
+
 ## Not changed
 
-Everything else — SDK integration, chat/message UI, IM protocol handling,
-build tooling beyond the identity fields above. This is upstream
-`openim-electron-demo` unmodified except for the rebrand fields listed above.
+Everything else — SDK integration, chat/message UI, IM protocol handling.
+(Build tooling _was_ touched on 2026-08-28 — see above — but only to fix
+genuine Windows-packaging bugs, never to change what gets built.) This is
+otherwise upstream `openim-electron-demo` unmodified except for the rebrand
+fields listed above.

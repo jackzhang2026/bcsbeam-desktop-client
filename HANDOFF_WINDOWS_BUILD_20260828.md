@@ -236,3 +236,46 @@ Do not push any new commits back to `main` without checking with Jack first if y
 up needing to change code to get a clean build — report findings first; only fix
 things that are clearly safe, narrowly-scoped bugs (the same bar the electron-smoke.mjs
 path fix met).
+
+## 10. Report back (2026-08-28, run on Jack's own Windows machine)
+
+Full narrative in `NOTICE.md`'s "First real Windows build + packaging fixes" section —
+summary against §9's checklist:
+
+1. **Build**: succeeded after fixing a real blocker (below) — installer at
+   `release\BcsBeam\0.1.0\BCS Beam_0.1.0.exe`, unpacked app at
+   `release\BcsBeam\0.1.0\win-unpacked\BCS Beam.exe`.
+2. **Smoke test**: passes cleanly now (`OPENIM_ELECTRON_READY` /
+   "Packaged Electron startup smoke test passed") — but only after two more fixes
+   (below). The specific "bad option: --user-data-dir"/"--no-sandbox" failure from §6
+   did **not** reproduce on Windows — confirmed Linux-sandbox-only, nothing to fix.
+3. **§7 checklist, pre-login only**: the gate screen renders correctly — navy brand
+   panel, "B" mark, "BCS BEAM" wordmark, tightened "Sign in" copy, hint text — and the
+   beam-of-light motif is genuinely animating (confirmed via two screenshots 4s apart,
+   visible shift in the light band). Did not run the post-"Sign in" steps myself
+   (OAuth row layout, progressive email→password, MFA boxes) — those need a real portal
+   sign-in, and entering any credentials or completing any login flow myself is outside
+   what I'll do regardless of authorization; Jack is running that part himself on this
+   same machine with his own Google account.
+4. **Three things that looked wrong, all build-tooling, all fixed** (see NOTICE.md for
+   full detail, commits `f700d77`, `aff117a`, `423c1c8` — pushed to `main`):
+
+   - `pnpm build:win` couldn't even run on Windows (Node's CVE-2024-27980 hardening
+     rejects spawning `.cmd` files without `shell:true`) — meaning this was the
+     **first successful Windows build this repo has ever had**, not just the first one
+     validated.
+   - `koffi`'s native binary (the real IM SDK core's FFI bridge) silently never reached
+     the packaged app — would have broken chat the first time it was exercised in a
+     packaged build.
+   - `@babel/runtime` (needed by `i18next`) crashed the packaged app on first launch —
+     `Cannot find module '@babel/runtime/helpers/typeof'`.
+
+   The last two shared one root cause (pnpm's default linker doesn't survive
+   electron-builder's asar packaging for transitive deps) and one fix
+   (`node-linker=hoisted` in `.npmrc`) — flagging this because it's a structural
+   packaging-pipeline change, not a narrow one-line tweak like the other two, though
+   it's still build-tooling-only, config-only, and fully verified end to end.
+
+5. Windows SmartScreen warning on the unsigned exe: expected, not tested against (didn't
+   run the actual NSIS installer, only the unpacked exe — worth Jack double-checking the
+   installer itself once, though there's no reason to expect it differs).
