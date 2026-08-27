@@ -61,10 +61,10 @@ export const Login = () => {
             loading={signingIn}
             onClick={() => void handleSignIn()}
           >
-            {signingIn ? "Signing in…" : "Sign in with BCS Beam Portal"}
+            {signingIn ? "Signing in…" : "Sign in"}
           </Button>
           <div className="mt-4 text-center text-xs text-gray-400">
-            Opens your existing customer portal login in a new window.
+            Opens your BCS Beam account in a secure window.
           </div>
         </div>
       </div>
@@ -84,15 +84,18 @@ export const Login = () => {
 const LeftBar = () => {
   return (
     <div
-      className="mr-14 flex h-[450px] w-[300px] flex-col items-center justify-center rounded-md px-8 text-center text-white"
+      className="relative mr-14 flex h-[450px] w-[300px] flex-col items-center justify-center overflow-hidden rounded-md px-8 text-center text-white"
       style={{
         background: "linear-gradient(160deg, #16407a 0%, #0a2049 55%, #04101f 100%)",
       }}
     >
-      <img className="mb-6" width={64} src={brand_mark} alt="" />
-      <img className="mb-8" width={168} src={brand_wordmark} alt="BCS Beam" />
-      <div className="text-lg font-medium text-white">{t("placeholder.title")}</div>
-      <div className="mt-2 text-sm text-white/60">{t("placeholder.subTitle")}</div>
+      <div className={styles.beam} aria-hidden="true" />
+      <div className="relative z-[1] flex flex-col items-center">
+        <img className="mb-6" width={64} src={brand_mark} alt="" />
+        <img className="mb-8" width={168} src={brand_wordmark} alt="BCS Beam" />
+        <div className="text-lg font-medium text-white">{t("placeholder.title")}</div>
+        <div className="mt-2 text-sm text-white/60">{t("placeholder.subTitle")}</div>
+      </div>
     </div>
   );
 };

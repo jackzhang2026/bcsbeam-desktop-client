@@ -16,3 +16,38 @@
     }
   }
 }
+
+// Ambient beam-of-light motif behind the brand panel — a company named
+// "Beam" had no beam anywhere (design review, BCS_BEAM_UI_DESIGN_PHASE1_20260828.md).
+// A soft glow + one diagonal light sweep; the one deliberate motion moment
+// on the login screen, disabled under prefers-reduced-motion.
+.beam {
+  position: absolute;
+  inset: -40% -20%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.16), transparent 70%)
+      78% 8% / 55% 55% no-repeat,
+    linear-gradient(
+      115deg,
+      transparent 42%,
+      rgba(255, 255, 255, 0.1) 46%,
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 54%
+    );
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: beam-drift 9s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes beam-drift {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0.85;
+  }
+  to {
+    transform: translate(-3%, 2%) rotate(2deg);
+    opacity: 1;
+  }
+}
