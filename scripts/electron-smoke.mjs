@@ -34,7 +34,18 @@ const getDefaultExecutable = () => {
     );
   }
   if (process.platform === "win32") {
-    return path.join(releaseRoot, "win-unpacked", `${rootPackage.name}.exe`);
+    // electron-builder names the win-unpacked executable after `productName`
+    // ("BCS Beam.exe"), not the package.json `name` field — found 2026-08-28
+    // verifying this on real Windows hardware; same rebrand-leftover pattern
+    // as the release/Base path bug above, just a different stale identifier.
+    // (electron-builder.json5's mac branch below likely has the same bug —
+    // .app bundles are also named after productName — but that's unverified;
+    // I don't have mac hardware to confirm it here, so leaving it alone.)
+    return path.join(
+      releaseRoot,
+      "win-unpacked",
+      `${rootPackage.productName ?? rootPackage.name}.exe`,
+    );
   }
   return path.join(releaseRoot, "linux-unpacked", rootPackage.name);
 };
