@@ -508,6 +508,43 @@ passed"), and the login gate screen renders and animates correctly
 sign-in, which per this project's own hard rule on credentials I don't do
 myself; Jack is running that part himself.
 
+## Round 2 Windows validation — triple-portal support (2026-08-28, per `HANDOFF_WINDOWS_BUILD_ROUND2_TRIPLE_PORTAL_20260828.md`)
+
+Same-day follow-up after the first Windows build above: `b023c71`/`5d87a9d` (a different
+session, per the round-2 handoff) took this client from customer-only to three account
+types — Customer, Staff, Vendor — with a new login picker, per-type session partitions,
+and per-type nav. Rebuilding for Windows surfaced one more real bug, same _class_ as the
+three above (a boundary that works in dev but not in the packaged app) but this time in
+application code, not build tooling:
+
+- **The packaged app crashed on every single launch**, before the login screen even
+  rendered — `Cannot find module '../../src/types/portal'` from
+  `electron/main/oauthProtocol.ts` (`9daa90a`). Root cause: `oauthProtocol.ts` imported a
+  real runtime function (`isPortalType`) from `src/types/portal.ts` — but
+  `vite-electron-plugin`'s `include: ["electron"]` scope (`vite.config.ts`) never bundles
+  anything under `src/`, so a _type-only_ import across that boundary is invisible
+  (TypeScript erases it before packaging could ever matter — this file's own
+  `PortalType` type import, and `portalLoginWindow.ts`'s/`preload/index.ts`'s, all work
+  fine for exactly that reason), but a real function can't be erased and was left as a
+  literal, unresolved `require()` call once packaged (`src/` was never part of
+  `electron-builder.json5`'s `files` list to begin with). Fixed by inlining the 3-line
+  predicate locally rather than touching the shared build config for it.
+
+Validated after that fix: clean `pnpm build:win`, `pnpm electron:smoke` passes, and the
+new login picker (§3.1 of the handoff) — a 3-way Customer/Staff/Vendor segmented control
+— renders with the selected pill filled solid blue (`colorPrimary`), correctly defaulting
+to Customer on first run. One small cosmetic finding, not fixed (UI sizing, not a
+build/packaging bug — out of the scope this pass is fenced to): "Customer" and "Vendor"
+render truncated ("Cust...", "Vend...") at the control's current width; only "Staff"
+fits.
+
+**Not validated**, and can't be from here: §3.2–§3.5 of the handoff (the actual
+Customer/Staff/Vendor login flows, the nav-inside-nav regression check, Staff's
+Microsoft OAuth, Vendor's Google OAuth handoff, the Attendance page's internal tabs, and
+session-partition isolation across all three types) all need real test credentials for
+each portal type, which — same as this project's hard rule on Stage B account creation —
+I won't provision myself regardless of authorization. Still outstanding as of this entry.
+
 ## Not changed
 
 Everything else — SDK integration, chat/message UI, IM protocol handling.

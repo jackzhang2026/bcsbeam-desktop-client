@@ -141,3 +141,36 @@ Staff's Microsoft OAuth work, did Vendor's Google OAuth handoff work, did the At
 tab bar stay usable, and did the three-account session-switch sequence in §3.5 come out
 clean. Same report-back style as round 1's own §10 works well — a dated section in this
 file or a NOTICE.md entry, whichever you did last time.
+
+## 6. Report back (2026-08-28, same machine as round 1)
+
+**§3.1 (login picker): pass, plus one real bug found and fixed, plus one small cosmetic
+finding.**
+
+- Real bug (`9daa90a`, pushed): the packaged app **crashed on every single launch**
+  before even reaching the login screen — "Cannot find module '../../src/types/portal'"
+  from `electron/main/oauthProtocol.ts`. Same class of problem as round 1's packaging
+  bugs (a build boundary that works in dev but not in the packaged app), but this one's
+  in application code, not build tooling: `oauthProtocol.ts` imported a real runtime
+  function (`isPortalType`) from `src/types/portal.ts` across the exact boundary this
+  project's own code comments already flag as type-import-only-safe
+  (`vite-electron-plugin`'s `include: ["electron"]` in `vite.config.ts` never bundles
+  `src/`, so a _type_ import there gets erased by TypeScript before it matters, but a
+  real function can't be erased and was left as a literal unresolved `require()` in the
+  packaged output). Fixed by inlining the 3-line predicate locally in `oauthProtocol.ts`
+  rather than touching the shared build config — narrowly scoped, verified by a clean
+  rebuild + passing smoke test afterward.
+- Segmented picker itself: confirmed rendering correctly — the selected pill ("Customer",
+  the correct first-run default) is filled **solid blue** (`colorPrimary`), not antd's
+  default grey. Screenshot on file if wanted.
+- Small cosmetic finding, not blocking: "Customer" and "Vendor" render truncated
+  ("Cust...", "Vend...") — only "Staff" fits at the control's current width. Flagging
+  since it's clearly visible, not fixing myself (this is a UI sizing tweak, not a
+  build/packaging bug — same fence as §4).
+
+**§3.2–§3.5: not run.** All four need real customer/staff/vendor test credentials, which
+haven't been provided to me — I raised this back to Jack when this round's handoff was
+first shared (creating or provisioning test accounts isn't something I'll do myself
+regardless of authorization) and it's still outstanding. Whoever picks this up next needs
+those credentials before any of §3.2–§3.5 can be attempted; nothing about them can be
+verified from the login screen alone.
