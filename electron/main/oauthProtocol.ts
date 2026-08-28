@@ -27,8 +27,30 @@
 // scheme as a second hop AFTER the browser-side OAuth exchange completes,
 // needs no new Google-side registration at all.
 import { app } from "electron";
-import { isPortalType } from "../../src/types/portal";
+import type { PortalType } from "../../src/types/portal";
 import { completeDesktopOAuthLogin } from "./portalLoginWindow";
+
+// NOT `import { isPortalType } from "../../src/types/portal"` (a real runtime
+// function, unlike the `import type` above): vite-electron-plugin's electron
+// build only transpiles files under its own `include: ["electron"]` scope
+// (see vite.config.ts) — it isn't a real bundler, so a relative import that
+// reaches outside that scope is left as a literal, unresolved `require(...)`
+// call in the compiled output. A *type-only* import over that same boundary
+// is invisible here (TypeScript erases it entirely before this problem could
+// ever occur — see portalLoginWindow.ts's own `PortalType`/`PortalLoginResult`
+// type imports, and the `PortalType` one just above, which both work fine for
+// exactly that reason), but `isPortalType` is a real function body, so it
+// can't be erased — and `src/` is never packaged into this app at all
+// (electron-builder.json5's `files` only lists `dist`/`dist-electron`), so
+// this crashed every packaged build with "Cannot find module
+// '../../src/types/portal'" (found 2026-08-28, round-2 Windows validation).
+// Duplicated inline rather than restructuring the shared build config for one
+// three-line predicate — keep in sync with src/types/portal.ts's
+// `PORTAL_TYPES`/`isPortalType` if that list ever changes.
+const PORTAL_TYPES: PortalType[] = ["customer", "staff", "vendor"];
+function isPortalType(value: unknown): value is PortalType {
+  return typeof value === "string" && (PORTAL_TYPES as string[]).includes(value);
+}
 
 const PROTOCOL = "bcsbeam";
 
