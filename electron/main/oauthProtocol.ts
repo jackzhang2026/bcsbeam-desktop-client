@@ -27,6 +27,7 @@
 // scheme as a second hop AFTER the browser-side OAuth exchange completes,
 // needs no new Google-side registration at all.
 import { app } from "electron";
+import { isPortalType } from "../../src/types/portal";
 import { completeDesktopOAuthLogin } from "./portalLoginWindow";
 
 const PROTOCOL = "bcsbeam";
@@ -74,9 +75,11 @@ async function handleProtocolUrl(url: string): Promise<void> {
 
   const token = parsed.searchParams.get("token");
   if (!token) return;
-  // `type` (e.g. "customer") is accepted for forward-compatibility (a future
-  // vendor-portal desktop client would need to distinguish) but unused
-  // today — completeDesktopOAuthLogin() only ever targets the customer
-  // portal's login window, the only kind this client has.
-  await completeDesktopOAuthLogin(token);
+  // TASK-062 (2026-08-28): `type` used to be accepted-but-ignored ("a future
+  // vendor-portal desktop client would need to distinguish" — that client is
+  // now this one). Old in-flight links with no `type` at all default to
+  // "customer", the only kind that existed before this change.
+  const typeParam = parsed.searchParams.get("type");
+  const portalType = isPortalType(typeParam) ? typeParam : "customer";
+  await completeDesktopOAuthLogin(token, portalType);
 }

@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { DataPath, IElectronAPI } from "./../../src/types/globalExpose.d";
+import { PortalType } from "./../../src/types/portal";
 import { contextBridge, ipcRenderer } from "electron";
 import { isProd } from "../utils";
 import "@openim/electron-client-sdk/lib/preload";
@@ -113,7 +114,7 @@ const saveFileToDisk = async ({
   return uniqueSavePath;
 };
 
-const portalLogin = () => ipcRenderer.invoke("portalLogin");
+const portalLogin = (portalType: PortalType) => ipcRenderer.invoke("portalLogin", portalType);
 const openExternal = (url: string) => ipcRenderer.invoke("openExternal", url);
 
 // Phase 2 (TASK-062): lets the Devices page (src/pages/devices) tell the

@@ -1,4 +1,5 @@
 import {
+  FileProtectOutlined,
   FileTextOutlined,
   LaptopOutlined,
   RightOutlined,
@@ -8,6 +9,7 @@ import { Badge, Divider, Layout, Popover, Upload, UploadProps } from "antd";
 import clsx from "clsx";
 import i18n, { t } from "i18next";
 import React, { memo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ImageResizer from "react-image-file-resizer";
 import { UNSAFE_NavigationContext, useResolvedPath } from "react-router-dom";
 
@@ -19,7 +21,13 @@ import message_icon from "@/assets/images/nav/nav_bar_message.png";
 import message_icon_active from "@/assets/images/nav/nav_bar_message_active.png";
 import change_avatar from "@/assets/images/profile/change_avatar.png";
 import OIMAvatar from "@/components/OIMAvatar";
-import { useContactStore, useConversationStore, useUserStore } from "@/store";
+import {
+  useContactStore,
+  useConversationStore,
+  usePortalTypeStore,
+  useUserStore,
+} from "@/store";
+import { PortalType } from "@/types/portal";
 import { feedbackToast } from "@/utils/common";
 import { emit } from "@/utils/events";
 import { uploadFile } from "@/utils/imCommon";
@@ -43,38 +51,56 @@ interface NavItemType {
   icon_active?: string;
   iconNode?: React.ReactNode;
   iconNodeActive?: React.ReactNode;
-  title: string;
+  // TASK-062 (2026-08-28): replaces a resolved `title: string`. The old
+  // version was set once at module load and then mutated BY FIXED ARRAY
+  // INDEX from an `i18n.on("languageChanged", ...)` listener below — a
+  // latent bug the moment this array becomes conditional/filtered (as it now
+  // is, by portal type: an index that meant "devices" for one portal type
+  // means something else, or nothing, for another). Resolving the string at
+  // render time via useTranslation() instead means there's no index to get
+  // wrong, and react-i18next's own bindings already re-render on language
+  // change for free — the imperative listener this replaces is deleted.
+  titleKey: string;
   path: string;
+  // Which portal types see this item. Chat/Contact are customer-only today
+  // — /api/openim/token/ (PortalAuthentication) has no credential-minting
+  // path for a Django-session staff login or a vendor bearer token, so
+  // there's nothing to authenticate a Chat tab with for those two yet.
+  portals: PortalType[];
 }
 
-const NavList: NavItemType[] = [
+const NAV_DEFS: NavItemType[] = [
   {
     icon: message_icon,
     icon_active: message_icon_active,
-    title: t("placeholder.chat"),
+    titleKey: "placeholder.chat",
     path: "/chat",
+    portals: ["customer"],
   },
   {
     icon: contact_icon,
     icon_active: contact_icon_active,
-    title: t("placeholder.contact"),
+    titleKey: "placeholder.contact",
     path: "/contact",
+    portals: ["customer"],
   },
   {
     iconNode: <FileTextOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
     iconNodeActive: (
       <FileTextOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
     ),
-    title: t("placeholder.tickets"),
+    titleKey: "placeholder.tickets",
     path: "/tickets",
+    portals: ["customer", "staff", "vendor"],
   },
   {
     iconNode: <LaptopOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
     iconNodeActive: (
       <LaptopOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
     ),
-    title: t("placeholder.devices"),
+    titleKey: "placeholder.devices",
     path: "/devices",
+    portals: ["customer"],
   },
   {
     iconNode: (
@@ -85,18 +111,23 @@ const NavList: NavItemType[] = [
         style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }}
       />
     ),
-    title: t("placeholder.security"),
+    titleKey: "placeholder.security",
     path: "/security",
+    portals: ["customer"],
+  },
+  {
+    iconNode: <FileProtectOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
+    iconNodeActive: (
+      <FileProtectOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
+    ),
+    titleKey: "placeholder.contractRates",
+    path: "/contract-rates",
+    // Read-only link to the vendor's own already-permission-gated Contract
+    // Rates page (frontend's VendorPortalContractRatesViewSet) rather than
+    // reinventing a detail view here.
+    portals: ["vendor"],
   },
 ];
-
-i18n.on("languageChanged", () => {
-  NavList[0].title = t("placeholder.chat");
-  NavList[1].title = t("placeholder.contact");
-  NavList[2].title = t("placeholder.tickets");
-  NavList[3].title = t("placeholder.devices");
-  NavList[4].title = t("placeholder.security");
-});
 
 const resizeFile = (file: File): Promise<File> =>
   new Promise((resolve) => {
@@ -115,10 +146,16 @@ const resizeFile = (file: File): Promise<File> =>
   });
 
 const NavItem = ({
-  nav: { icon, icon_active, iconNode, iconNodeActive, title, path },
+  nav: { icon, icon_active, iconNode, iconNodeActive, titleKey, path },
 }: {
   nav: NavItemType;
 }) => {
+  // Named to avoid shadowing this file's module-level `t` import (i18next's
+  // static function, still used below by profileMenuList) — this one is the
+  // reactive react-i18next hook binding, the actual fix for the bug in
+  // NavItemType's titleKey comment above.
+  const { t: translate } = useTranslation();
+  const title = translate(titleKey);
   const resolvedPath = useResolvedPath(path);
   const { navigator } = React.useContext(UNSAFE_NavigationContext);
   const toPathname = navigator.encodeLocation
@@ -215,6 +252,10 @@ const LeftNavBar = memo(() => {
   const selfInfo = useUserStore((state) => state.selfInfo);
   const userLogout = useUserStore((state) => state.userLogout);
   const updateSelfInfo = useUserStore((state) => state.updateSelfInfo);
+  // Falls back to "customer" for the same reason src/pages/tickets/index.tsx
+  // does — defensive only, every route this bar renders on is post-login.
+  const portalType = usePortalTypeStore((state) => state.portalType) ?? "customer";
+  const navList = NAV_DEFS.filter((nav) => nav.portals.includes(portalType));
 
   const profileMenuClick = (idx: number) => {
     switch (idx) {
@@ -344,7 +385,7 @@ const LeftNavBar = memo(() => {
           />
         </Popover>
 
-        {NavList.map((nav) => (
+        {navList.map((nav) => (
           <NavItem nav={nav} key={nav.path} />
         ))}
       </div>

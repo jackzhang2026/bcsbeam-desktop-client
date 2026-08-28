@@ -29,6 +29,14 @@ function App() {
       locale={locale === "zh-CN" ? zhCN : enUS}
       theme={{
         token: { colorPrimary: "#0089FF" },
+        // TASK-062 (2026-08-28): AntD's Segmented does NOT pick up
+        // colorPrimary for its selected-item fill on its own (CLAUDE.md
+        // §6g) — added for the login screen's portal-type picker
+        // (src/pages/login/index.tsx), computed from this same token so it
+        // can't drift out of sync with it.
+        components: {
+          Segmented: { itemSelectedBg: "#0089FF", itemSelectedColor: "#fff" },
+        },
       }}
     >
       <QueryClientProvider client={queryClient}>

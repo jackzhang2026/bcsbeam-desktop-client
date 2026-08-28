@@ -1,5 +1,7 @@
 import { Platform } from "@openim/wasm-client-sdk";
 
+import { PortalLoginResult, PortalType } from "./portal";
+
 export type DataPath = "public" | "emojiData" | "sdkResources" | "logsPath";
 
 export interface IElectronAPI {
@@ -25,14 +27,12 @@ export interface IElectronAPI {
   ipcSendSync: <T = unknown>(channel: string, ...args: unknown[]) => T;
   saveFileToDisk: (params: { file: File; sync?: boolean }) => Promise<string>;
   getFileByPath: (filePath: string) => Promise<File | null>;
-  /** Opens the real customer-portal login page in its own window and resolves
-   * with the OpenIM credentials minted for that portal session once login
-   * completes. See electron/main/portalLoginWindow.ts. */
-  portalLogin: () => Promise<{
-    openimUserID: string;
-    token: string;
-    expireTimeSeconds: number;
-  }>;
+  /** Opens the given portal type's own real login page in its own window
+   * (its own persistent Electron session partition) and resolves once login
+   * completes there. Only `customer` carries OpenIM chat credentials in the
+   * result — see src/types/portal.ts's PortalLoginResult for why staff/vendor
+   * don't. See electron/main/portalLoginWindow.ts. */
+  portalLogin: (portalType: PortalType) => Promise<PortalLoginResult>;
   /** Opens an http(s) URL in the OS default browser. Used by the embedded
    * ticket <webview> (src/pages/tickets) for links that try to open in a
    * new tab/window — a bare <webview> has nowhere else to put those. */

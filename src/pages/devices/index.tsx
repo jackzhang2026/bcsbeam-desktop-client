@@ -8,6 +8,13 @@
 // (it_audit/portal_customer_views.py). See PortalWebView for why this
 // needs no separate auth step.
 //
+// TASK-062 (2026-08-28): customer-only page — "my monitored devices" and
+// RustDesk pairing don't exist as a staff or vendor concept, so this page is
+// never reachable outside a customer session (LeftNavBar only shows it for
+// portalType==='customer'). Uses the customer session partition unconditionally
+// for the same reason. `embed=1` hides CustomerPortalLayout's own sidebar/
+// header — see src/pages/tickets/index.tsx's comment for the full reasoning.
+//
 // "help me right now" one-click (2026-08-26, upgraded 2026-08-27): the
 // desktop shell is the only party that can cheaply answer "which machine is
 // this?" — it appends its own OS hostname (getHostname()) AND, when
@@ -30,12 +37,11 @@ const PORTAL_DEVICES_URL =
 
 const buildDevicesUrl = (hostname: string, rustdeskId: string) => {
   const params = new URLSearchParams();
+  params.set("embed", "1");
   if (hostname) params.set("localHost", hostname);
   if (rustdeskId) params.set("localRustdeskId", rustdeskId);
-  const query = params.toString();
-  if (!query) return PORTAL_DEVICES_URL;
   const separator = PORTAL_DEVICES_URL.includes("?") ? "&" : "?";
-  return `${PORTAL_DEVICES_URL}${separator}${query}`;
+  return `${PORTAL_DEVICES_URL}${separator}${params.toString()}`;
 };
 
 export const Devices = () => {
@@ -66,5 +72,5 @@ export const Devices = () => {
       </div>
     );
   }
-  return <PortalWebView url={url} />;
+  return <PortalWebView url={url} partition="persist:portal-customer" />;
 };

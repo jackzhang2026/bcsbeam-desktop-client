@@ -17,7 +17,18 @@ interface NewWindowEvent extends Event {
   url: string;
 }
 
-export const PortalWebView = ({ url }: { url: string }) => {
+export const PortalWebView = ({
+  url,
+  partition,
+}: {
+  url: string;
+  // TASK-062 (2026-08-28): must match the partition the portal type's login
+  // window used (electron/main/portalLoginWindow.ts), or this webview opens
+  // Electron's default session instead and finds no login there. Left
+  // optional/unset for back-compat — an unset partition keeps this
+  // component's original single-session behavior.
+  partition?: string;
+}) => {
   const webviewRef = useRef<HTMLElement>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +66,16 @@ export const PortalWebView = ({ url }: { url: string }) => {
           <Spin />
         </div>
       )}
-      <webview ref={webviewRef} src={url} style={{ width: "100%", height: "100%" }} />
+      {/* `partition` is a genuine Electron <webview> attribute (session
+          isolation, see this component's `partition` prop doc) — react's DOM
+          typings don't know about Electron's webview-specific attributes. */}
+      <webview
+        ref={webviewRef}
+        src={url}
+        // eslint-disable-next-line react/no-unknown-property
+        partition={partition}
+        style={{ width: "100%", height: "100%" }}
+      />
     </div>
   );
 };

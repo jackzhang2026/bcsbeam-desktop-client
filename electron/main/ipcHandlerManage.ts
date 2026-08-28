@@ -85,8 +85,8 @@ export const setIpcMainListener = () => {
       window: BrowserWindow.getFocusedWindow()!,
     });
   });
-  ipcMain.handle(IpcRenderToMain.portalLogin, () => {
-    return openPortalLoginWindow(getMainWindow() ?? undefined);
+  ipcMain.handle(IpcRenderToMain.portalLogin, (_, portalType) => {
+    return openPortalLoginWindow(portalType, getMainWindow() ?? undefined);
   });
   // Used by the embedded ticket <webview> (src/pages/tickets) — links that
   // page tries to open in a new tab/window should go to the OS browser

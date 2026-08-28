@@ -64,6 +64,13 @@ const router = createHashRouter([
               return { Component: Security };
             },
           },
+          {
+            path: "contract-rates",
+            async lazy() {
+              const { ContractRates } = await import("@/pages/contractRates");
+              return { Component: ContractRates };
+            },
+          },
         ],
       },
       {
