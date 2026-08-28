@@ -1,5 +1,5 @@
 import {
-  FileProtectOutlined,
+  ClockCircleOutlined,
   FileTextOutlined,
   LaptopOutlined,
   RightOutlined,
@@ -116,15 +116,17 @@ const NAV_DEFS: NavItemType[] = [
     portals: ["customer"],
   },
   {
-    iconNode: <FileProtectOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
+    // TASK-062 (2026-08-28, corrected same day): Jack's explicit v1 scope for
+    // Vendor is Attendance + Tickets only (Tickets already covers FSM work
+    // orders as a tab — see src/pages/attendance/index.tsx's comment).
+    // Everything else (an earlier Contract Rates entry included) is
+    // deliberately deferred, not built ahead of need.
+    iconNode: <ClockCircleOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR }} />,
     iconNodeActive: (
-      <FileProtectOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
+      <ClockCircleOutlined style={{ fontSize: 20, color: NAV_ICON_COLOR_ACTIVE }} />
     ),
-    titleKey: "placeholder.contractRates",
-    path: "/contract-rates",
-    // Read-only link to the vendor's own already-permission-gated Contract
-    // Rates page (frontend's VendorPortalContractRatesViewSet) rather than
-    // reinventing a detail view here.
+    titleKey: "placeholder.attendance",
+    path: "/attendance",
     portals: ["vendor"],
   },
 ];

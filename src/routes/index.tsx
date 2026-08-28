@@ -65,10 +65,10 @@ const router = createHashRouter([
             },
           },
           {
-            path: "contract-rates",
+            path: "attendance",
             async lazy() {
-              const { ContractRates } = await import("@/pages/contractRates");
-              return { Component: ContractRates };
+              const { Attendance } = await import("@/pages/attendance");
+              return { Component: Attendance };
             },
           },
         ],

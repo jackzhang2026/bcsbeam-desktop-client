@@ -12,7 +12,7 @@ interface ImportMetaEnv {
   readonly VITE_CUSTOMER_TICKETS_URL?: string;
   readonly VITE_STAFF_TICKETS_URL?: string;
   readonly VITE_VENDOR_TICKETS_URL?: string;
-  readonly VITE_VENDOR_CONTRACT_RATES_URL?: string;
+  readonly VITE_VENDOR_ATTENDANCE_URL?: string;
 }
 
 interface ImportMeta {
