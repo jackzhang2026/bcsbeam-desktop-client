@@ -31,14 +31,22 @@ import styles from "./index.module.scss";
 // decides which URL loads. Segmented control per CLAUDE.md §6g (a real
 // tab-like switcher, filled colorPrimary on the active item, icon on every
 // item), defaulting to whichever type this install last signed in as.
+// Icons kept small (13px) so icon + label fit each segment without
+// truncating — the round-2 Windows build found "Customer"/"Vendor" rendering
+// as "Cust…"/"Vend…" at the previous size (only "Staff", the shortest, fit).
+// Paired with size="small" + the slightly wider/less-padded card below.
 const PORTAL_TYPE_OPTIONS: {
   label: string;
   value: PortalType;
   icon: React.ReactNode;
 }[] = [
-  { label: "Customer", value: "customer", icon: <UserOutlined /> },
-  { label: "Staff", value: "staff", icon: <TeamOutlined /> },
-  { label: "Vendor", value: "vendor", icon: <ShopOutlined /> },
+  {
+    label: "Customer",
+    value: "customer",
+    icon: <UserOutlined style={{ fontSize: 13 }} />,
+  },
+  { label: "Staff", value: "staff", icon: <TeamOutlined style={{ fontSize: 13 }} /> },
+  { label: "Vendor", value: "vendor", icon: <ShopOutlined style={{ fontSize: 13 }} /> },
 ];
 
 export const Login = () => {
@@ -85,13 +93,16 @@ export const Login = () => {
       <div className="flex flex-1 items-center justify-center">
         <LeftBar />
         <div
-          className={`${styles.login} mr-14 flex h-[450px] w-[350px] flex-col items-center justify-center rounded-md p-11`}
+          className={`${styles.login} mr-14 flex h-[450px] w-[380px] flex-col items-center justify-center rounded-md p-9`}
           style={{ boxShadow: "0 0 30px rgba(0,0,0,.1)" }}
         >
           <div className="mb-8 text-center text-xl font-medium">{APP_NAME}</div>
           <Segmented
             block
-            size="middle"
+            // size="small" tightens item padding + font so the three labels
+            // fit without truncation (round-2 build finding); the wider card
+            // (380) + reduced padding (p-9) above give the extra room.
+            size="small"
             className="mb-6"
             options={PORTAL_TYPE_OPTIONS.map((option) => ({
               label: option.label,
